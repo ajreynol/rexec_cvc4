@@ -4,9 +4,7 @@
 
 `rexec [remote host name] [command] [code sync options] [remote command options]`
 
-# Background:
-
-### Basics
+# Basics
 
 The script `rexec` is used for managing multiple simultaneous builds of cvc4 via
 remote machine(s). It handles:
@@ -16,13 +14,16 @@ remote machine(s). It handles:
 The client script works in cooperation with a server script `lexec_lnx`, which
 can be installed on the remote machine via `rexec remotehost install-server`.
 
-### Setup
+# Background
 
-As an example, say we want:
+We give the motivation through the following example.
+Say we want:
 
 * Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
-for stable.
-* Two build configurations: `debug` and `prod`.
+for stable, which are actively being developed on the local machine (in
+parallel) by the developer.
+* Two build configurations: `debug` and `prod`, corresponding to debug
+and production builds of cvc4.
 
 On the local machine, the developer maintains the following working directories,
 assuming a local home directory `localhome`:
@@ -35,15 +36,17 @@ assuming a local home directory `localhome`:
 * `localhome/build-cvc4/exp/debug/`
 
 The first and fourth contain working git clones of a (fork of) the cvc4 repo. 
-The developer may issue git commands as usual in these directories, as desired.
+The developer may issue git commands in these directories as desired, or
+may otherwise use the `rexec` to manage certain git commands (see below).
 
-The other four directories are working directories for issuing remote build
-commands. For example, running:
+The other four directories are working directories for issuing commands on
+remote machine(s). For example, running:
 
 * `rexec remoteHost configure`
 
 in working directory `localhome/build/stb/prod` runs a call to configure the
-source directory `remoteHome/cvc4-stb` with build configuration `prod` on the
+source directory `remoteHome/cvc4-stb` (containing a syncronized copy of the
+source code in `localhome/cvc4-stb/`) with build configuration `prod` on the
 remote machine `remoteHost`.
 
 Note that the local build directories may optionally contain local build files
@@ -137,4 +140,5 @@ Internally, the server script implements the following policy for code syncroniz
 | No            | No            | No              | N/A              | N/A               | force -b                      |                                                  |
 
 This is implemented by having the client script communicate the local code state via command
-line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script.
+line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script. Thus, in all
+cases, the server script knows which case we are in.
