@@ -17,14 +17,15 @@ As an example, say we want:
 for stable.
 * Two build configurations: `debug` and `prod` for production.
 
-On the local machine, the user maintains the following directories:
+On the local machine, the user maintains the following directories, assuming
+a local home directory `localhome`:
 
-* localHome/cvc4-stb/
-* localHome/cvc4-exp/
-* localHome/build/stb/prod/
-* localHome/build/stb/debug/
-* localHome/build/exp/prod/
-* localHome/build/exp/debug/
+* `localhome/cvc4-stb/`
+* `localhome/cvc4-exp/`
+* `localhome/build-cvc4/stb/prod/`
+* `localhome/build-cvc4/stb/debug/`
+* `localhome/build-cvc4/exp/prod/`
+* `localhome/build-cvc4/exp/debug/`
 
 The first two contain working git clones of a (fork of) the cvc4 repo, which
 will be syncronized pairwise between local and remote(s). The latter four
@@ -37,24 +38,24 @@ The user may issue remote calls from the local build directories, where the
 current directory determines the remote (source, build configuration) copies.
 For example, running:
 
-TODO: automatic setup of remote git.
+* `rexec remoteHost configure`
 
-> rexec myhostname configure
-
-in working directory `localHome/build/stb/prod` runs the configure.sh for
+in working directory `localhome/build/stb/prod` runs the configure.sh for
 using the source directory remoteHome/cvc4-stb with build configuration "prod".
 
 The script allows for commands that test cvc4 (e.g. `regress`). It also supports
 for creating and copying static binaries to the local machine (`rinstall`)
 with a naming schema. In particular, a successful `rinstall` command from
-`localHome/build/stb/debug/` will generate the static binary `debug-stb-cvc4`
+`localhome/build/stb/debug/` will generate the static binary `debug-stb-cvc4`
 on the local machine.
+
+
+TODO: automatic setup of remote git.
 
 # Usage
 
-The common use case of the script is to run for a fixed remote machine, call it
-`remoteHost`. There are two main components of the remainder of the command
-line:
+Assume a (single) remote machine `remoteHost`.
+After specifying the remote host, there are two main components of the command line to `rexec remoteHost ...`:
 * What command to execute on the remote machine.
 * How do we want to syncronize the source code to the remote machine. This can
 either be manual or through git. The former may be preferred for performance
@@ -68,7 +69,7 @@ Install a copy of the server script to the remote machine.
 Print debug information on the local and remote source and binaries.
 * `rinstall`
 Remote install to local. Builds and copies a static binary of the current
-(source, build config) to `localHome/bin` on the local machine.
+(source, build config) to `localhome/bin` on the local machine.
 * `reset`
 Delete the remote's build directory for the current (source, build config).
 * `reset-all`
