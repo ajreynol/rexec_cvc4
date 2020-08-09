@@ -1,0 +1,61 @@
+#!/bin/bash
+
+
+# ========================= static configuration
+REMOTESYNCDIRS="/space/ajreynol/cvc4"
+LOCALSRCDIR="/home/andrew/cvc4"
+REMOTE="ajreynol@linux.cs.uiowa.edu"
+SYNCEXEC="mksync_code"
+# ========================= end static configuration
+
+# usage: mksync_code [syncronization type]
+echo "=== $SYNCEXEC $@"
+
+SYNCTYPE=$1
+shift
+echo "$SYNCEXEC: Syncronize type is \"$SYNCTYPE\""
+
+# ========================= compute source suffix
+CURRDIR=$(pwd)
+echo "$SYNCEXEC: This directory is $CURRDIR"
+if [[ $CURRDIR != $LOCALSRCDIR* ]]; then
+  echo "$SYNCEXEC: ERROR: not a git root directory"
+  exit 1;
+fi
+SRCSUFFIX=${CURRDIR#"$LOCALSRCDIR"}
+if [ ! -z $SRCSUFFIX ]; then
+  SRCSUFFIX=${SRCSUFFIX#"-"}
+fi
+echo "$SYNCEXEC: with directory suffix \"$SRCSUFFIX\""
+# ========================= end compute source suffix
+
+
+# ========================= compute the sync directories
+# compute directories based on configuration
+if [ ! -z $SRCSUFFIX ]; then
+  REMOTESYNCDIRS="$REMOTESYNCDIRS-$SRCSUFFIX"
+  LOCALSRCDIR="$LOCALSRCDIR-$SRCSUFFIX"
+fi
+if [ $SYNCTYPE = "src" ]; then
+  LOCALSYNCDIRS="./src/"
+  REMOTESYNCDIRS="$REMOTESYNCDIRS/src/"
+elif [ $SYNCTYPE = "test" ]; then
+  LOCALSYNCDIRS="./test/"
+  REMOTESYNCDIRS="$REMOTESYNCDIRS/test/"
+elif [ $SYNCTYPE = "all" ]; then
+  LOCALSYNCDIRS="."
+else
+  echo "$SYNCEXEC: ERROR: Unknown syncronize type"
+  exit 1;
+fi
+shift
+# ========================= end compute the sync directories
+
+
+# ========================= run syncronization
+# rsync remote with local, based on config
+echo "$SYNCEXEC: EXEC: rsync -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
+rsync -chazP -e "ssh -p 40" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS
+# ========================= end run syncronization
+
+echo "$SYNCEXEC: finished $@"

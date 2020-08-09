@@ -1,0 +1,347 @@
+#!/bin/bash
+
+# usage: rexec [host name] [command] [code sync options] [remote command options]
+#
+# === Background:
+#
+# This script is used for managing multiple simultaneous builds of cvc4 via
+# remote machine(s). It handles:
+# - Multiple copies of the cvc4 source,
+# - Multiple build configurations for each of these sources (e.g. prod/debug).
+#
+# As an example, say we want:
+#
+# Two source copies of cvc4: "exp" for experimental and "stb" for stable.
+# Two build configurations: "debug" and "prod" for production.
+#
+# On the remote machine, the user maintains the following directories:
+# $RHOMEDIR/cvc4-stb
+# $RHOMEDIR/cvc4-exp
+# On the local machine, the user maintains the following directories:
+# $HOMEDIR/cvc4-stb
+# $HOMEDIR/cvc4-exp
+# $BASEBUILDDIR/stb/prod/
+# $BASEBUILDDIR/stb/debug/
+# $BASEBUILDDIR/exp/prod/
+# $BASEBUILDDIR/exp/debug/
+# The first four contain working git clones of a (fork of) the cvc4 repo, which
+# will be syncronized pairwise between local and remote(s). The latter four
+# contain (optionally, in case of loss of connection to remote machines) contain
+# local build files for the corresponding (source, build configuration), which
+# can be initialized by `configure_cvc4_local` running from the local source
+# directories.
+#
+# The user may issue remote calls from the local build directories, where the
+# current directory determines the remote (source, build configuration) copies.
+# For example, running:
+# `rexec myhostname configure`
+# in working directory `$BASEBUILDDIR/stb/prod` runs the configure.sh for
+# using the source directory $RHOMEDIR/cvc4-stb with build configuration "prod".
+#
+# === Commands:
+#
+# * install-server : 
+#    Install a copy of the server script to the remote machine.
+# * info :
+#    Print debug information on the local and remote source and binaries.
+# * rinstall : 
+#    Remote install to local. Builds and copies a static binary of the current
+#    (source, build config) to $HOMEDIR/bin on the local machine.
+# * reset : 
+#    Delete the remote's build directory for the current (source, build config).
+# * reset-all : 
+#    Delete the remote's entire build directory.
+# * configure :
+#    Runs configure.sh on remote for the current (source, build config).
+# * install|regress|ctest|units|clean: 
+#    Issues a command in the remote's build directory.
+# * checkout [branch name]
+#    Syntax sugar for `info -b [branch name]`.
+# 
+# === Code syncronization methods:
+#
+# -B [branch name] : Switch to branch local and remote.
+# -b [branch name] : Switch to branch remote. Use if you changed branches manually on local independent of this script.
+# -c [commit message] : Commit to local, rebase remote.
+# -r : Rebase remote (not recommended to use this manually)
+# -s [syncronize type] : Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
+#
+
+# ========================= static configuration
+# the directory containing source trees $HOMEDIR/cvc4-*
+HOMEDIR="/home/andrew"
+# the remote machine
+REMOTE="ajreynol@linux.cs.uiowa.edu"
+# the directory containing source trees $RHOMEDIR/cvc4-* on the remote machine
+RHOMEDIR="/space/ajreynol"
+# the directory containing the local build file structure
+BASEBUILDROOT="build-cvc4"
+BASEBUILDDIR="$HOMEDIR/$BASEBUILDROOT/"
+# the name of the client script (this script)
+THISEXEC="rexec"
+# the name of the server script
+SERVEREXEC="lexec_lnx"
+# ========================= end static configuration
+
+# ================================================== shared method library
+# Compute the git source info of directory $1
+# Store result in $INFOSRC / $INFOSRCCOMMIT / $INFOSRCCHANGED / $INFOSTRING
+function computeSrcInfo 
+{
+  echo "$THISEXEC: EXEC: cd $1"
+  cd $1
+  echo "$THISEXEC: compute git information"
+  INFOSRC=$(git status | grep -F "On branch ")
+  INFOSRC=${INFOSRC#"On branch "}
+  INFOSRCCOMMIT=$(git rev-parse HEAD)
+  INFOSRCCHANGED=$(git status | grep -F "Changes not staged")
+  if [ ! -z "$INFOSRCCHANGED" ]; then
+    INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8} (with modifications)]"
+  else
+    INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8}]"
+  fi
+}
+# Compute build information (binary name and configure options) for given source prefix $1 and build type $2
+# Store result in $BINARYNAME / $CARGS
+function computeBuildInfo
+{
+  BASEBINARYNAME="cvc4"
+  if [ $2 = "prod" ]; then
+    # production has the default prefix
+    BINARYPREFIX=""
+    CARGS="production --static --program-prefix="
+  elif [ $2 = "debug" ]; then
+    BINARYPREFIX="d-"
+    CARGS="debug --static --no-unit-testing --program-prefix=d-"
+  elif [ $2 = "debug-unit" ]; then
+    BINARYPREFIX="du-"
+    CARGS="debug --program-prefix=du-"
+  elif [ $2 = "profile" ]; then
+    BINARYPREFIX="prof-"
+    CARGS="production --static --profiling --program-prefix=prof-"
+  else
+    echo "$THISEXEC: ERROR: unknown build type $2"
+    exit 1
+  fi
+  # if there is a prefix
+  if [ -z $1 ]; then
+    # add the src prefix if it exists
+    BINARYPREFIX="$BINARYPREFIX$1-"
+    CARGS="$CARGS$1-"
+  fi
+  # binary name is used for remote install and double checking git scm
+  BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
+}
+# ================================================== end shared method library
+
+
+echo "=== $THISEXEC $@"
+HOSTNAME=$1
+shift
+COMMAND=$1
+shift
+
+#TODO: automatically infer desired syncronization?
+#TODO: fix issue with CVC4_REGRESSION_ARGS with multiple arguments
+#TODO: don't rinstall when compilation fails
+#TODO: -F to force reset/configure first
+#TODO: git clean? manage new files
+#TODO: -s sync test+src
+#TODO: git clone remote command (completely redo remote's fork)
+#TODO: rebase, then suggest -s src, instead of failing
+
+# ========================= compute source suffix
+CURRDIR=$(pwd)
+echo "$THISEXEC: This directory is $CURRDIR"
+if [[ $CURRDIR != $BASEBUILDDIR* ]]; then
+  echo "$THISEXEC: ERROR: not a build directory"
+  exit 1;
+fi
+BUILDTYPE=$(basename "${CURRDIR}")
+echo "$THISEXEC: Build type is $BUILDTYPE"
+CURRDIR=$(dirname "${CURRDIR}")
+SRCSUFFIXTMP=$(basename "${CURRDIR}")
+LOCALSRCDIR="$HOMEDIR/cvc4"
+if [ ! $SRCSUFFIXTMP = "$BASEBUILDROOT" ]; then
+  SRCSUFFIX="$SRCSUFFIXTMP"
+  LOCALSRCDIR="$LOCALSRCDIR-$SRCSUFFIX"
+  CURRDIR=$(dirname "${CURRDIR}")
+  CURRDIR=$(basename "${CURRDIR}")
+  if [ ! $CURRDIR = "$BASEBUILDROOT" ]; then
+    echo "$THISEXEC: ERROR: unexpected build directory $CURRDIR"
+    exit 1;
+  fi
+fi
+echo "$THISEXEC: source suffix is \"$SRCSUFFIX\""
+# ========================= end compute source suffix
+
+
+# ========================= get information about local source (pre-sync)
+computeSrcInfo $LOCALSRCDIR
+echo "==============================================="
+echo "LOCAL SOURCE: $INFOSTRING"
+echo "==============================================="
+# ========================= end get information about local source (pre-sync)
+
+
+# ========================= code syncronization method
+if [ X$1 = X'-B' ] || [ $COMMAND = "checkout" ]; then
+
+  # note that -b BRANCHNAME is a remote change branch, -B changes both local and remote
+  if [ ! -z "$INFOSRCCHANGED" ]; then
+    echo "$THISEXEC: ERROR: Cannot change branches, local changes not commited."
+    exit 1
+  fi
+  if [ $COMMAND = "checkout" ]; then
+    # local checkout command becomes info on remote
+    COMMAND="info"
+  fi
+  # checkout a fresh copy of a different branch on local and remote
+  BRANCHNAME=$2
+  shift
+  shift
+  # checkout locally
+  echo "$THISEXEC: EXEC: git checkout $BRANCHNAME"
+  if ! git checkout $BRANCHNAME; then
+    echo "$THISEXEC: ERROR: failed to checkout $BRANCHNAME"
+    exit 1;
+  fi
+  # will also update branch on remote
+  LEXECAUXARGS="-b $BRANCHNAME"
+  # ensure git information is up-to-date
+  computeSrcInfo $LOCALSRCDIR
+  
+elif [ X$1 = X'-c' ]; then
+
+  if [ -z "$INFOSRCCHANGED" ]; then
+    echo "$THISEXEC: ERROR: No changes to commit."
+    exit 1
+  elif [ $INFOSRC = "master" ]; then
+    echo "$THISEXEC: ERROR: Cannot commit to master branch."
+    exit 1
+  fi
+  # git commit locally, and git rebase remote
+  COMMITMSG=$2
+  shift
+  shift
+  echo "$THISEXEC: EXEC: git commit -a -m \"$COMMITMSG\""
+  git commit -a -m "$COMMITMSG"
+  echo "$THISEXEC: EXEC: git push"
+  git push
+  # force rebase on remote machine
+  LEXECAUXARGS="-r"
+  # ensure git information is up-to-date
+  computeSrcInfo $LOCALSRCDIR
+  
+elif [ X$1 = X'-s' ]; then
+
+  if [ -z "$INFOSRCCHANGED" ]; then
+    echo "$THISEXEC: WARNING: No need to sync, there are no local changes."
+  else
+    # syncronize the local state of the code to the remote machine without git
+    SYNCTYPE=$2
+    shift
+    shift
+    echo "$THISEXEC: EXEC: mksync_code $SYNCTYPE $SRCSUFFIX"
+    if ! mksync_code $SYNCTYPE $SRCSUFFIX; then
+      echo "$THISEXEC: ERROR: failed to syncronize source"
+      exit 1;
+    fi
+    # indicate to remote that we have sync
+    LEXECLOCALINFO="-lsync"
+  fi
+  
+fi
+# ========================= end code syncronization method
+
+
+
+# ========================= compute information on how to call remote
+BINARYNAME="cvc4"
+LEXECARGS="$BUILDTYPE"
+if [ ! -z $SRCSUFFIX ]; then
+  BINARYNAME="$SRCSUFFIX-$BINARYNAME"
+  LEXECARGS="$LEXECARGS -p $SRCSUFFIX"
+fi
+if [ $BUILDTYPE = "prod" ]; then
+  BINARYNAME="$BINARYNAME"
+elif [ $BUILDTYPE = "debug" ]; then
+  BINARYNAME="d-$BINARYNAME"
+elif [ $BUILDTYPE = "debug-unit" ]; then
+  BINARYNAME="du-$BINARYNAME"
+elif [ $BUILDTYPE = "profile" ]; then
+  BINARYNAME="prof-$BINARYNAME"
+else
+  echo "$THISEXEC: ERROR: unknown build type $BUILDTYPE"
+  exit 1
+fi
+# indicate local branch name
+if [ ! -z $INFOSRC ]; then
+  LEXECLOCALINFO="$LEXECLOCALINFO -lbranch $INFOSRC"
+fi
+# indicate local commit name
+if [ ! -z $INFOSRCCOMMIT ]; then
+  LEXECLOCALINFO="$LEXECLOCALINFO -lcommit ${INFOSRCCOMMIT:0:8}"
+fi
+if [ -z "$INFOSRCCHANGED" ]; then
+  LEXECLOCALINFO="$LEXECLOCALINFO -lnomod"
+fi
+# local info is copied to remote
+LEXECARGS="$LEXECARGS $LEXECLOCALINFO"
+echo "$THISEXEC: binary name is $BINARYNAME"
+# ========================= end compute information on how to call remote
+
+
+# ========================= run the command
+if [ -z $COMMAND ]; then
+  echo "$THISEXEC: ERROR: no command specified"
+  exit 1
+fi
+echo "==============================================="
+echo "ISSUE: $COMMAND $LEXECAUXARGS $@"
+echo "LOCAL SOURCE: $INFOSTRING"
+echo "==============================================="
+# check valid command
+if ! [[ "$COMMAND" =~ ^(install-server|install-file|rinstall|install|regress|ctest|configure|units|clean|reset|reset-all|info|none)$ ]]; then
+  echo "$THISEXEC: ERROR: unknown command $COMMAND"
+  exit 1
+fi
+
+if [ $COMMAND = "install-server" ]; then
+
+  # install the server script on the remote machine
+  echo "$THISEXEC: EXEC: scp -P 40 $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin"
+  scp -P 40 $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin
+
+elif [ $COMMAND = "install-file" ]; then
+
+  # install custom file
+  FILENAME=$1
+  shift
+
+  # install the server script on the remote machine
+  echo "$THISEXEC: EXEC: scp -P 40 $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin"
+  scp -P 40 $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin
+  
+elif [ $COMMAND = "rinstall" ]; then
+
+  # remote install to local machine
+  echo "$THISEXEC: issue remote install command"
+  echo "$THISEXEC: EXEC: ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@"
+  ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@
+  # scp the binary
+  echo "$THISEXEC: issue binary copy command"
+  echo "$THISEXEC: EXEC: scp -P 40 $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
+  scp -P 40 $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
+
+else
+
+  # all other commands passed unchanged
+  echo "$THISEXEC: issue remote command"
+  echo "$THISEXEC: EXEC: ssh $HOSTNAME $SERVEREXEC $LEXECARGS $COMMAND $LEXECAUXARGS $@"
+  ssh $HOSTNAME $SERVEREXEC $LEXECARGS $COMMAND $LEXECAUXARGS $@
+  
+fi
+# ========================= end run the command
+
+echo "$THISEXEC: Finished $@"

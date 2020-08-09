@@ -1,0 +1,314 @@
+#!/bin/bash
+
+# ========================= static configuration
+# the directory on the remote machine source trees $HOMEDIR/cvc4-*
+HOMEDIR="/space/ajreynol"
+# the directory on the remote machine containing the build file structure
+BASEBUILDDIR="/tmp/ajreynol/cmake"
+# the name of the server script (this script)
+THISEXEC="lexec_lnx"
+# ========================= end static configuration
+
+# %%% BEGIN DO NOT MODIFY THIS COPY, USE client VERSION
+# ================================================== shared method library
+# Compute the git source info of directory $1
+# Store result in $INFOSRC / $INFOSRCCOMMIT / $INFOSRCCHANGED / $INFOSTRING
+function computeSrcInfo 
+{
+  echo "$THISEXEC: EXEC: cd $1"
+  cd $1
+  echo "$THISEXEC: compute git information"
+  INFOSRC=$(git status | grep -F "On branch ")
+  INFOSRC=${INFOSRC#"On branch "}
+  INFOSRCCOMMIT=$(git rev-parse HEAD)
+  INFOSRCCHANGED=$(git status | grep -F "Changes not staged")
+  if [ ! -z "$INFOSRCCHANGED" ]; then
+    INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8} (with modifications)]"
+  else
+    INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8}]"
+  fi
+}
+# ================================================== end shared method library
+# %%% END DO NOT MODIFY THIS COPY, USE client VERSION
+
+# usage: lexec_lnx [build type] (-p [prefix])? [command] [sync options] [command options]
+echo "=== $THISEXEC $@"
+BUILDTYPE=$1
+shift
+echo "$THISEXEC: build type is $BUILDTYPE"
+
+# ========================= get the source/build directory, local branch
+if [ X$1 = X'-p' ]; then
+  SRCPREFIX=$2;
+  shift;
+  shift;
+  echo "$THISEXEC: Prefix is $SRCPREFIX"
+  SRCDIR="$HOMEDIR/cvc4-$SRCPREFIX"
+  BUILDDIR="$BASEBUILDDIR/$SRCPREFIX/$BUILDTYPE/"
+else
+  SRCDIR="$HOMEDIR/cvc4"
+  BUILDDIR="$BASEBUILDDIR/$BUILDTYPE/"
+fi
+echo "$THISEXEC: source prefix is \"$SRCPREFIX\""
+echo "$THISEXEC: source directory is $SRCDIR"
+echo "$THISEXEC: build directory is $BUILDDIR"
+# get information about the state of the local code, based on automatic command line args
+# has local indicated that it has called a remote sync operation with this?
+if [ X$1 = X'-lsync' ]; then
+  shift;
+  LOCALSYNC="true"
+fi
+if [ X$1 = X'-lbranch' ]; then
+  LOCALBRANCHREF=$2;
+  shift;
+  shift;
+  echo "$THISEXEC: local source branch reference $LOCALBRANCHREF"
+  if [ X$1 = X'-lcommit' ]; then
+    LOCALCOMMITREF=$2;
+    shift;
+    shift;
+    echo "$THISEXEC: local source commit reference $LOCALCOMMITREF"
+  fi
+  # has local indicated that it has not been modified?
+  if [ X$1 = X'-lnomod' ]; then
+    shift;
+    LOCALNOMODIFIED="true"
+  fi
+fi
+# ========================= end get the source/build directory, local branch
+
+COMMAND=$1
+shift
+# check command that warrant sanity information about src/binary
+if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then
+  REQUIRESSYNC="true"
+  # compute source information, which will impact adaptive git syncronization below
+  computeSrcInfo $SRCDIR
+fi
+
+# ========================= code syncronization
+# switch branches if necessary
+if [ X$1 = X'-b' ]; then
+  BRANCH=$2;
+  shift;
+  shift;
+fi
+# rebase, if necessary
+if [ X$1 = X'-r' ]; then
+  REBASE="true"
+  shift;
+fi
+# get the proactive branch
+if [ ! -z "$REQUIRESSYNC" ]; then
+  if [ ! -z $LOCALBRANCHREF ]; then
+    if [ $LOCALBRANCHREF != $INFOSRC ]; then
+      # requires branching
+      echo "$THISEXEC: requires branch"
+      BRANCH=$LOCALBRANCHREF
+      BRANCHFORCE="true"
+    fi
+    if [ ! -z $LOCALCOMMITREF ]; then
+      if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
+        # requires rebasing
+        echo "$THISEXEC: requires rebasing"
+        REBASE="true"
+        REBASEFORCE="true"
+      fi
+    fi
+  fi
+fi
+
+# branch or rebase. notice these two options are mutual exclusive since branch subsumes rebase
+if [ ! -z "$BRANCH" ]; then
+  if [ ! -z $BRANCHFORCE ]; then
+    echo "$THISEXEC: NOTICE: forcing git branch switch to $BRANCH"
+  fi
+  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  cd $SRCDIR
+  echo "$THISEXEC: EXEC: git checkout ."
+  git checkout .
+  echo "$THISEXEC: EXEC: git pull --rebase"
+  git pull --rebase
+  echo "$THISEXEC: EXEC: git checkout $BRANCH"
+  if ! git checkout $BRANCH; then
+    echo "$THISEXEC:: ERROR: failed to checkout $BRANCH"
+    exit 1;
+  fi
+  echo "$THISEXEC: EXEC: git pull --rebase"
+  git pull --rebase
+  # ensure git information is up-to-date for check below
+  computeSrcInfo $SRCDIR
+elif [ ! -z $REBASE ]; then
+  if [ ! -z $REBASEFORCE ]; then
+    echo "$THISEXEC: NOTICE: forcing git rebase"
+  fi
+  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  cd $SRCDIR
+  echo "$THISEXEC: EXEC: git checkout ."
+  git checkout .
+  echo "$THISEXEC: EXEC: git pull --rebase"
+  git pull --rebase
+  # ensure git information is up-to-date for check below
+  computeSrcInfo $SRCDIR
+fi
+# check command that warrant sanity information about src/binary
+if [ ! -z "$REQUIRESSYNC" ]; then
+  # ensure the same branch as local, or else something went wrong
+  if [ ! -z $LOCALBRANCHREF ]; then
+    if [ $LOCALBRANCHREF != $INFOSRC ]; then
+      echo "$THISEXEC: ERROR: branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
+      exit 1
+    fi
+    if [ ! -z $LOCALCOMMITREF ]; then
+      if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
+        echo "$THISEXEC: ERROR: branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
+        exit 1
+      fi
+    fi
+    # we are now ensured that the branch/commit matches on local and remote
+    # now, ensure we are in the same source code modification state (clean/dirty)
+    if [ ! -z "$INFOSRCCHANGED" ]; then
+      # remote is clean, probably forgot to sync changes from local
+      if [ -z $LOCALNOMODIFIED ]; then
+        # we know the sync is wrong, so this is an error
+        SYNCERROR="local is dirty, but remote src is clean, use -s sync or commit changes locally to proceed"
+      fi
+    else
+      # local is clean but remote is dirty (strange case where local reverted to clean after sync in a dirty state, on the same commit)
+      if [ ! -z $LOCALNOMODIFIED ]; then
+        # we know the sync is wrong, so this is an error
+        SYNCERROR="local is clean, but remote src is dirty"
+      fi
+      # incremental modifications should continue to use manual sync -s
+      if [ -z $LOCALSYNC ]; then
+        # the sync may have been correct if local did not have any further changes, hence this is a warning
+        SYNCWARNING="local did not use sync -s and remote src is dirty"
+      fi
+    fi
+    if [ ! -z "$SYNCERROR" ]; then
+      echo "$THISEXEC: ERROR: $SYNCERROR (branch [$LOCALBRANCHREF] commit [${INFOSRCCOMMIT:0:8}])"
+      exit 1;
+    fi
+    if [ ! -z "$SYNCWARNING" ]; then
+      echo "$THISEXEC: WARNING: $SYNCWARNING (branch [$LOCALBRANCHREF] commit [${INFOSRCCOMMIT:0:8}])"
+    fi
+  fi
+  echo "==============================================="
+  echo "REMOTE ISSUE: $COMMAND"
+  echo "REMOTE SOURCE: $INFOSTRING"
+  echo "==============================================="
+fi
+# ========================= end code syncronization
+
+
+# ========================= compute build and configuration information
+BINARYNAME="cvc4"
+if [ ! -z $SRCPREFIX ]; then
+  BINARYNAME="$SRCPREFIX-$BINARYNAME"
+fi
+if [ $BUILDTYPE = "prod" ]; then
+  BINARYNAME="$BINARYNAME"
+  CARGS="production --static --program-prefix="
+elif [ $BUILDTYPE = "debug" ]; then
+  BINARYNAME="d-$BINARYNAME"
+  CARGS="debug --static --no-unit-testing --program-prefix=d-"
+elif [ $BUILDTYPE = "debug-unit" ]; then
+  BINARYNAME="du-$BINARYNAME"
+  CARGS="debug --program-prefix=du-"
+elif [ $BUILDTYPE = "profile" ]; then
+  BINARYNAME="prof-$BINARYNAME"
+  CARGS="production --static --profiling --program-prefix=prof-"
+else
+  echo "$THISEXEC: ERROR: unknown build type $BUILDTYPE"
+  exit 1
+fi
+if [ -z $SRCPREFIX ]; then
+  CARGS="$CARGS"
+else
+  CARGS="$CARGS$SRCPREFIX-"
+fi
+echo "$THISEXEC: binary name is $BINARYNAME"
+# ========================= end compute build and configuration information
+
+
+# ========================= run the command
+if [ $COMMAND = "install" ]; then
+
+  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  cd $BUILDDIR
+  echo "$THISEXEC: EXEC: make install -j8 $@"
+  if ! make install -j8 $@; then
+    echo "$THISEXEC: ERROR: failed to install"
+    exit 1
+  fi
+  if [ $BUILDTYPE = "prod" ]; then
+    # strip the binary (so that it is easier to scp from local)
+    echo "$THISEXEC: EXEC: strip $HOMEDIR/bin/$BINARYNAME"
+    strip $HOMEDIR/bin/$BINARYNAME
+  fi
+  
+elif [ $COMMAND = "regress" ] || [ $COMMAND = "units" ] || [ $COMMAND = "clean" ]; then
+
+  # these commands are forwarded to make
+  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  cd $BUILDDIR
+  echo "$THISEXEC: EXEC: make $COMMAND -j8 $@"
+  make $COMMAND -j8 $@
+  
+elif [ $COMMAND = "configure" ]; then
+
+  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  cd $SRCDIR
+  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing --cxxtest-dir=$HOMEDIR/cxxtest/ --symfpu $@"
+  echo "$THISEXEC: EXEC: ./configure.sh $CARGS"
+  ./configure.sh $CARGS
+  
+elif [ $COMMAND = "reset" ]; then
+
+  echo "$THISEXEC: EXEC: rm -rf $BUILDDIR"
+  rm -rf $BUILDDIR
+  
+elif [ $COMMAND = "reset-all" ]; then
+
+  echo "$THISEXEC: EXEC: rm -rf $BASEBUILDDIR"
+  rm -rf $BASEBUILDDIR
+  
+elif [ $COMMAND = "ctest" ]; then
+
+  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  cd $BUILDDIR
+  echo "$THISEXEC: EXEC: ctest -j8 $@"
+  ctest -j8 $@
+
+elif [ $COMMAND = "info" ] || [ $COMMAND = "none" ]; then
+
+  # do nothing
+  echo "$THISEXEC: no-op $COMMAND"
+  
+else
+
+  echo "rexec: ERROR: unknown command $COMMAND"
+  exit 1
+  
+fi
+# ========================= end run the command
+
+
+# check command that warrant sanity information about src/binary
+if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then
+  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  cd $SRCDIR
+  INFOFULLSTRING="REMOTE SOURCE: $INFOSTRING"
+  if [[ "$COMMAND" =~ ^(install|info)$ ]]; then
+    echo "$THISEXEC: EXEC: $BINARYNAME --show-config | grep scm"
+    INFOBINARY=$($BINARYNAME --show-config | grep scm)
+    INFOBINARY=${INFOBINARY#"scm           : git "}
+    INFOFULLSTRING="$INFOFULLSTRING, BINARY: $INFOBINARY"
+  fi
+  echo "==============================================="
+  echo "COMMAND COMPLETE: $COMMAND"
+  echo "$INFOFULLSTRING"
+  echo "==============================================="
+fi
+
+echo "$THISEXEC: finished $@"

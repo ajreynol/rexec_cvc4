@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# ========================= static configuration
+# name of this script
+SYNCEXEC="sync_file"
+# the directory containing source trees $HOMEDIR/cvc4-*
+HOMEDIR="/home/andrew"
+# ========================= end static configuration
+
+# usage: sync_file [pull prefix] [file]
+echo "=== sync_file $@"
+
+# to be run in source directory $HOMEDIR/cvc4-*/. AU
+
+# ========================= compute source suffix
+CURRDIR=$(pwd)
+BASEDIR="$HOMEDIR/cvc4"
+echo "rexec: This directory is $CURRDIR"
+if [[ $CURRDIR != $BASEDIR* ]]; then
+  echo "rexec: ERROR: not a git root directory"
+  exit 1;
+fi
+SRCSUFFIX=${CURRDIR#"$BASEDIR"}
+if [ ! -z $SRCSUFFIX ]; then
+  SRCSUFFIX=${SRCSUFFIX#"-"}
+fi
+echo "rexec: with directory suffix \"$SRCSUFFIX\""
+# ========================= end compute source suffix
+
+FILENAME=$1
+shift
+
+PULLPREFIX=$1
+shift
+
+# ========================= get the source directory
+if [ ! -z $PULLPREFIX ]; then
+  SRCDIR="$HOMEDIR/cvc4-$PULLPREFIX"
+else
+  SRCDIR="$HOMEDIR/cvc4"
+fi
+echo "$SERVEREXEC: pull prefix is \"$PULLPREFIX\""
+echo "$SERVEREXEC: source directory is $SRCDIR"
+# ========================= end get the source directory
+
+echo "$SERVEREXEC: EXEC: cp $SRCDIR/$FILENAME ./$FILENAME"
+cp $SRCDIR/$FILENAME ./$FILENAME
+
