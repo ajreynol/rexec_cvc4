@@ -13,15 +13,19 @@ Two source copies of cvc4: "exp" for experimental and "stb" for stable.
 Two build configurations: "debug" and "prod" for production.
 
 On the remote machine, the user maintains the following directories:
-`$RHOMEDIR/cvc4-stb`
-`$RHOMEDIR/cvc4-exp`
+
+>$RHOMEDIR/cvc4-stb
+$RHOMEDIR/cvc4-exp
+
 On the local machine, the user maintains the following directories:
-`$HOMEDIR/cvc4-stb`
-`$HOMEDIR/cvc4-exp`
-`$BASEBUILDDIR/stb/prod/`
-`$BASEBUILDDIR/stb/debug/`
-`$BASEBUILDDIR/exp/prod/`
-`$BASEBUILDDIR/exp/debug/`
+
+> $HOMEDIR/cvc4-stb
+$HOMEDIR/cvc4-exp
+$BASEBUILDDIR/stb/prod/
+$BASEBUILDDIR/stb/debug/
+$BASEBUILDDIR/exp/prod/
+$BASEBUILDDIR/exp/debug/
+
 The first four contain working git clones of a (fork of) the cvc4 repo, which
 will be syncronized pairwise between local and remote(s). The latter four
 contain (optionally, in case of loss of connection to remote machines) contain
@@ -32,12 +36,17 @@ directories.
 The user may issue remote calls from the local build directories, where the
 current directory determines the remote (source, build configuration) copies.
 For example, running:
-`rexec myhostname configure`
+
+> rexec myhostname configure
+
 in working directory `$BASEBUILDDIR/stb/prod` runs the configure.sh for
 using the source directory $RHOMEDIR/cvc4-stb with build configuration "prod".
 
-The script allows for commands that test cvc4 (e.g. make regress) and support
-for 
+The script allows for commands that test cvc4 (e.g. `regress`). It also supports
+for creating and copying static binaries to the local machine (`rinstall`)
+with a naming schema. In particular, a successful `rinstall` command from
+`$BASEBUILDDIR/stb/debug/` will generate the static binary `debug-stb-cvc4`
+on the local machine.
 
 # Commands:
 
