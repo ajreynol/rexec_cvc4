@@ -63,10 +63,15 @@ TODO: automatic setup of remote git.
 # Usage
 
 Assume a remote machine `remoteHost`, there are two main components of the command line to `rexec remoteHost ...`:
+
 * What command to execute on the remote machine.
 * How do we want to syncronize the source code to the remote machine. This can
 either be manual or through git. The former may be preferred for performance
 and for keeeping a cleaner git log.
+
+Additional command line arguments are passed (when applicable) to the remote
+executable (e.g. to the corresponding `make regress` command that is run
+remotely).
 
 ### Commands:
 
