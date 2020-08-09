@@ -1,6 +1,6 @@
 #!/bin/bash
 
 # usage: rexec
-#   [remote ssh host name] [command] [code sync options] [remote command options]
+#   [remote name] [remote command] [code sync options] [remote command options]
 
 rexec_internal "/path/to/local-src/" "remoteMachineName" "/path/to/remote-src/" $@

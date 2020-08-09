@@ -116,6 +116,11 @@ Commit to local, rebase remote.
 Rebase remote (not recommended to use this manually).
 * `-s [syncronize type]`
 Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
+Syncronization type is one of the following:
+  - src: Syncronize the `src/` subdirectory.
+  - test: Syncronize the `test/` subdirectory.
+  - dev: Syncronize the `src/` and `test/` subdirectories.
+  - all: Syncronize the entire repo (not recommended).
 
 # Examples:
 
@@ -147,6 +152,6 @@ This is implemented by having the client script communicate the local code state
 line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script. Thus, in all
 cases, the server script knows which case we are in. The above policy aims to do as little work
 as possible while maintaining assurance that the code is syncronized. In five of the eight cases
-above, the server does its best effort to syncronize by forcing a rebase `r` or branch `b`
+above, the server does its best effort to syncronize by forcing a rebase `-r` or branch `-b`
 but in two such cases, syncronization is known to be wrong (cases 3 and 4) and the server script aborts.
 In one case, syncronization is unknown by the remote machine, and a warning is given instead (case 2).

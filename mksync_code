@@ -58,7 +58,7 @@ shift
 
 # ========================= run syncronization
 # rsync remote with local, based on config
-echo "$THISEXEC: EXEC: rsync -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
+echo "$THISEXEC: run: rsync -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
 rsync -chazP -e "ssh -p 40" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS
 # ========================= end run syncronization
 

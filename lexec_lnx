@@ -17,7 +17,7 @@ THISEXEC="lexec_lnx"
 # Store result in $INFOSRC / $INFOSRCCOMMIT / $INFOSRCCHANGED / $INFOSTRING
 function computeSrcInfo 
 {
-  echo "$THISEXEC: EXEC: cd $1"
+  echo "$THISEXEC: run: cd $1"
   cd $1
   echo "$THISEXEC: compute git information"
   INFOSRC=$(git status | grep -F "On branch ")
@@ -41,13 +41,16 @@ function computeBuildInfo
     CARGS="production --static --program-prefix="
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
-    CARGS="debug --static --no-unit-testing --program-prefix=d-"
+    CARGS="debug --static --no-unit-testing"
+  elif [ $1 = "debug-lfsc" ]; then
+    BINARYPREFIX="dl-"
+    CARGS="debug --static --no-unit-testing --lfsc"
   elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
-    CARGS="debug --program-prefix=du-"
+    CARGS="debug"
   elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
-    CARGS="production --static --profiling --program-prefix=prof-"
+    CARGS="production --static --profiling"
   else
     echo "$THISEXEC: ERROR: unknown build type $1"
     exit 1
@@ -56,7 +59,10 @@ function computeBuildInfo
   if [ ! -z $2 ]; then
     # add the src prefix if it exists
     BINARYPREFIX="$BINARYPREFIX$2-"
-    CARGS="$CARGS$2-"
+  fi
+  # add binary program prefix to configure arguments
+  if [ ! -z $BINARYPREFIX ]; then
+    CARGS=" --program-prefix=$BINARYPREFIX-"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -137,46 +143,52 @@ if [ ! -z "$REQUIRESSYNC" ]; then
     if [ $LOCALBRANCHREF != $INFOSRC ]; then
       # the remote branch doesn't match, so force a git branch
       echo "$THISEXEC: requires branch"
-      BRANCH=$LOCALBRANCHREF
-      BRANCHFORCE="true"
+      if [ -z $BRANCH ]; then
+        BRANCH=$LOCALBRANCHREF
+        BRANCHFORCE="true"
+      fi
     fi
     if [ ! -z $LOCALCOMMITREF ]; then
       if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
         # the remote commit doesn't match, so force a git rebase
         echo "$THISEXEC: requires rebasing"
-        REBASE="true"
-        REBASEFORCE="true"
+        if [ -z $REBASE ]; then
+          REBASE="true"
+          REBASEFORCE="true"
+        fi
       fi
       if [ ! -z "$INFOSRCCHANGED" ]; then
-        # local is clean but remote is dirty (strange case where local reverted to clean after sync in a dirty state, on the same commit)
+        # local is clean but remote is dirty (case where local reverted to clean after sync in a dirty state, on the same commit)
         if [ ! -z $LOCALNOMODIFIED ]; then
           # just force rebasing to correct
           echo "$THISEXEC: requires rebasing (local was reverted)"
-          REBASE="true"
-          REBASEFORCE="true"
+          if [ -z $REBASE ]; then
+            REBASE="true"
+            REBASEFORCE="true"
+          fi
         fi
       fi
     fi
   fi
 fi
 
-# branch or rebase. notice these two options are mutual exclusive since branch subsumes rebase
+# branch or rebase. notice these two options are mutually exclusive since branch subsumes rebase
 if [ ! -z "$BRANCH" ]; then
   if [ ! -z $BRANCHFORCE ]; then
     echo "$THISEXEC: NOTICE: forcing git branch switch to $BRANCH"
   fi
-  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  echo "$THISEXEC: EXEC: git checkout ."
+  echo "$THISEXEC: run: git checkout ."
   git checkout .
-  echo "$THISEXEC: EXEC: git pull --rebase"
+  echo "$THISEXEC: run: git pull --rebase"
   git pull --rebase
-  echo "$THISEXEC: EXEC: git checkout $BRANCH"
+  echo "$THISEXEC: run: git checkout $BRANCH"
   if ! git checkout $BRANCH; then
     echo "$THISEXEC:: ERROR: failed to checkout $BRANCH"
     exit 1;
   fi
-  echo "$THISEXEC: EXEC: git pull --rebase"
+  echo "$THISEXEC: run: git pull --rebase"
   git pull --rebase
   # ensure git information is up-to-date for check below
   computeSrcInfo $SRCDIR
@@ -184,25 +196,34 @@ elif [ ! -z $REBASE ]; then
   if [ ! -z $REBASEFORCE ]; then
     echo "$THISEXEC: NOTICE: forcing git rebase"
   fi
-  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  echo "$THISEXEC: EXEC: git checkout ."
+  echo "$THISEXEC: run: git checkout ."
   git checkout .
-  echo "$THISEXEC: EXEC: git pull --rebase"
+  echo "$THISEXEC: run: git pull --rebase"
   git pull --rebase
   # ensure git information is up-to-date for check below
   computeSrcInfo $SRCDIR
 fi
-# check command that warrant sanity information about src/binary
+
+# Now, check that we are syncronized for commands that warrant sanity information about src/binary.
 if [ ! -z "$REQUIRESSYNC" ]; then
   # ensure the same branch as local, or else something went wrong
-  if [ ! -z $LOCALBRANCHREF ]; then
+  if [ -z $LOCALBRANCHREF ]; then
+    # internal error, something went wrong in rexec or this script?
+    SYNCERROR="(internal error) local did not provide a branch name"
+  else
     if [ $LOCALBRANCHREF != $INFOSRC ]; then
+      # internal error, something went wrong with remote git?
       echo "$THISEXEC: ERROR: (internal error) branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
       exit 1
     fi
-    if [ ! -z $LOCALCOMMITREF ]; then
+    if [ -z $LOCALCOMMITREF ]; then
+      # internal error, something went wrong in rexec or this script?
+      SYNCERROR="(internal error) local did not provide a commit number"
+    else
       if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
+        # internal error, something went wrong with remote git?
         echo "$THISEXEC: ERROR: (internal error) branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
         exit 1
       fi
@@ -211,7 +232,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
       if [ ! -z "$INFOSRCCHANGED" ]; then
         # local is clean but remote is dirty
         if [ ! -z $LOCALNOMODIFIED ]; then
-          # internal error, this case should be correct above
+          # internal error, this case should be corrected above
           SYNCERROR="(internal error) local is clean, but remote src is dirty"
         fi
         # incremental modifications should continue to use manual sync -s
@@ -226,18 +247,14 @@ if [ ! -z "$REQUIRESSYNC" ]; then
           SYNCERROR="local is dirty, but remote src is clean, use -s X or commit changes locally to proceed"
         fi
       fi
-    else
-      # internal error, should never happen
-      SYNCERROR="(internal error) local did not provide a commit number"
     fi
-
-    if [ ! -z "$SYNCERROR" ]; then
-      echo "$THISEXEC: ERROR: $SYNCERROR (branch [$LOCALBRANCHREF] commit [$LOCALCOMMITREF])"
-      exit 1;
-    fi
-    if [ ! -z "$SYNCWARNING" ]; then
-      echo "$THISEXEC: WARNING: $SYNCWARNING (branch [$LOCALBRANCHREF] commit [$LOCALCOMMITREF])"
-    fi
+  fi
+  if [ ! -z "$SYNCERROR" ]; then
+    echo "$THISEXEC: ERROR: $SYNCERROR (branch [$LOCALBRANCHREF] commit [$LOCALCOMMITREF])"
+    exit 1;
+  fi
+  if [ ! -z "$SYNCWARNING" ]; then
+    echo "$THISEXEC: WARNING: $SYNCWARNING (branch [$LOCALBRANCHREF] commit [$LOCALCOMMITREF])"
   fi
   echo "==============================================="
   echo "RUN COMMAND: $COMMAND"
@@ -247,34 +264,34 @@ fi
 # ========================= end code syncronization
 
 
-# ========================= compute build and configuration information
+# ========================= compute build and configuration information, again
 computeBuildInfo $BUILDTYPE $SRCPREFIX
 echo "$THISEXEC: binary name is $BINARYNAME"
-# ========================= end compute build and configuration information
+# ========================= end compute build and configuration information, again
 
 
 # ========================= run the command
 if [ $COMMAND = "install" ]; then
 
-  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: EXEC: make install -j8 $@"
+  echo "$THISEXEC: run: make install -j8 $@"
   if ! make install -j8 $@; then
     echo "$THISEXEC: ERROR: failed to install"
     exit 1
   fi
   if [ $BUILDTYPE = "prod" ]; then
     # strip the binary (so that it is easier to scp from local)
-    echo "$THISEXEC: EXEC: strip $HOMEDIR/bin/$BINARYNAME"
+    echo "$THISEXEC: run: strip $HOMEDIR/bin/$BINARYNAME"
     strip $HOMEDIR/bin/$BINARYNAME
   fi
   
 elif [ $COMMAND = "regress" ] || [ $COMMAND = "units" ] || [ $COMMAND = "clean" ]; then
 
   # these commands are forwarded to make
-  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: EXEC: make $COMMAND -j8 $@"
+  echo "$THISEXEC: run: make $COMMAND -j8 $@"
   make $COMMAND -j8 $@
   
 elif [ $COMMAND = "exec" ]; then
@@ -282,40 +299,40 @@ elif [ $COMMAND = "exec" ]; then
   # a custom executable
   EXECNAME=$1
   shift
-  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: EXEC: $EXECNAME $@"
+  echo "$THISEXEC: run: $EXECNAME $@"
   $EXECNAME $@
   
 elif [ $COMMAND = "configure" ]; then
 
-  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
   CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing --cxxtest-dir=$HOMEDIR/cxxtest/ --symfpu $@"
-  echo "$THISEXEC: EXEC: ./configure.sh $CARGS"
+  echo "$THISEXEC: run: ./configure.sh $CARGS"
   ./configure.sh $CARGS
   
 elif [ $COMMAND = "reset" ]; then
 
-  echo "$THISEXEC: EXEC: rm -rf $BUILDDIR"
+  echo "$THISEXEC: run: rm -rf $BUILDDIR"
   rm -rf $BUILDDIR
   
 elif [ $COMMAND = "reset-all" ]; then
 
-  echo "$THISEXEC: EXEC: rm -rf $BASEBUILDDIR"
+  echo "$THISEXEC: run: rm -rf $BASEBUILDDIR"
   rm -rf $BASEBUILDDIR
   
 elif [ $COMMAND = "ctest" ]; then
 
-  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: EXEC: ctest -j8 $@"
+  echo "$THISEXEC: run: ctest -j8 $@"
   ctest -j8 $@
 
 elif [ $COMMAND = "info" ] || [ $COMMAND = "none" ]; then
 
   # do nothing
-  echo "$THISEXEC: no-op $COMMAND"
+  echo "$THISEXEC: no action required for $COMMAND"
   
 else
 
@@ -328,11 +345,11 @@ fi
 
 # check command that warrant sanity information about src/binary
 if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then
-  echo "$THISEXEC: EXEC: cd $SRCDIR"
+  echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
   INFOFULLSTRING="REMOTE SOURCE: $INFOSTRING"
   if [[ "$COMMAND" =~ ^(install|info)$ ]]; then
-    echo "$THISEXEC: EXEC: $BINARYNAME --show-config | grep scm"
+    echo "$THISEXEC: run: $BINARYNAME --show-config | grep scm"
     INFOBINARY=$($BINARYNAME --show-config | grep scm)
     INFOBINARY=${INFOBINARY#"scm           : git "}
     INFOFULLSTRING="$INFOFULLSTRING, BINARY: $INFOBINARY"

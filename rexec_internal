@@ -1,5 +1,13 @@
 #!/bin/bash
 
+#TODO: fix issue with CVC4_REGRESSION_ARGS with multiple arguments
+#TODO: don't rinstall when compilation fails
+#TODO: -F to force reset/configure first
+#TODO: COMMAND: clean-src: git clean remote src
+#TODO: COMMAND: clone: git setup, auto-install dependencies?
+#TODO: COMMAND: setup: configure local, git clone remote
+#TODO: -s sync test+src
+
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
 # usage: rexec_internal 
@@ -32,7 +40,7 @@ SCPAUXARGS="-P 40"
 # Store result in $INFOSRC / $INFOSRCCOMMIT / $INFOSRCCHANGED / $INFOSTRING
 function computeSrcInfo 
 {
-  echo "$THISEXEC: EXEC: cd $1"
+  echo "$THISEXEC: run: cd $1"
   cd $1
   echo "$THISEXEC: compute git information"
   INFOSRC=$(git status | grep -F "On branch ")
@@ -56,13 +64,16 @@ function computeBuildInfo
     CARGS="production --static --program-prefix="
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
-    CARGS="debug --static --no-unit-testing --program-prefix=d-"
+    CARGS="debug --static --no-unit-testing"
+  elif [ $1 = "debug-lfsc" ]; then
+    BINARYPREFIX="dl-"
+    CARGS="debug --static --no-unit-testing --lfsc"
   elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
-    CARGS="debug --program-prefix=du-"
+    CARGS="debug"
   elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
-    CARGS="production --static --profiling --program-prefix=prof-"
+    CARGS="production --static --profiling"
   else
     echo "$THISEXEC: ERROR: unknown build type $1"
     exit 1
@@ -71,7 +82,10 @@ function computeBuildInfo
   if [ ! -z $2 ]; then
     # add the src prefix if it exists
     BINARYPREFIX="$BINARYPREFIX$2-"
-    CARGS="$CARGS$2-"
+  fi
+  # add binary program prefix to configure arguments
+  if [ ! -z $BINARYPREFIX ]; then
+    CARGS=" --program-prefix=$BINARYPREFIX-"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -84,15 +98,6 @@ HOSTNAME=$1
 shift
 COMMAND=$1
 shift
-
-#TODO: automatically infer desired syncronization?
-#TODO: fix issue with CVC4_REGRESSION_ARGS with multiple arguments
-#TODO: don't rinstall when compilation fails
-#TODO: -F to force reset/configure first
-#TODO: git clean? manage new files
-#TODO: -s sync test+src
-#TODO: git clone remote command (completely redo remote's fork)
-#TODO: rebase, then suggest -s src, instead of failing
 
 # ========================= compute source suffix
 CURRDIR=$(pwd)
@@ -145,7 +150,7 @@ if [ X$1 = X'-B' ] || [ $COMMAND = "checkout" ]; then
   shift
   shift
   # checkout locally
-  echo "$THISEXEC: EXEC: git checkout $BRANCHNAME"
+  echo "$THISEXEC: run: git checkout $BRANCHNAME"
   if ! git checkout $BRANCHNAME; then
     echo "$THISEXEC: ERROR: failed to checkout $BRANCHNAME"
     exit 1;
@@ -168,9 +173,9 @@ elif [ X$1 = X'-c' ]; then
   COMMITMSG=$2
   shift
   shift
-  echo "$THISEXEC: EXEC: git commit -a -m \"$COMMITMSG\""
+  echo "$THISEXEC: run: git commit -a -m \"$COMMITMSG\""
   git commit -a -m "$COMMITMSG"
-  echo "$THISEXEC: EXEC: git push"
+  echo "$THISEXEC: run: git push"
   git push
   # force rebase on remote machine
   LEXECAUXARGS="-r"
@@ -186,7 +191,7 @@ elif [ X$1 = X'-s' ]; then
     SYNCTYPE=$2
     shift
     shift
-    echo "$THISEXEC: EXEC: mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX"
+    echo "$THISEXEC: run: mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX"
     if ! mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX; then
       echo "$THISEXEC: ERROR: failed to syncronize source"
       exit 1;
@@ -242,7 +247,7 @@ fi
 if [ $COMMAND = "install-server" ]; then
 
   # install the server script on the remote machine
-  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin"
+  echo "$THISEXEC: run: scp $SCPAUXARGS $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin"
   scp $SCPAUXARGS $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin
 
 elif [ $COMMAND = "install-file" ]; then
@@ -252,25 +257,25 @@ elif [ $COMMAND = "install-file" ]; then
   shift
 
   # install the server script on the remote machine
-  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin"
+  echo "$THISEXEC: run: scp $SCPAUXARGS $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin"
   scp $SCPAUXARGS $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin
   
 elif [ $COMMAND = "rinstall" ]; then
 
   # remote install to local machine
   echo "$THISEXEC: issue remote install command"
-  echo "$THISEXEC: EXEC: ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@"
+  echo "$THISEXEC: run: ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@"
   ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@
   # scp the binary
   echo "$THISEXEC: issue binary copy command"
-  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
+  echo "$THISEXEC: run: scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
   scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
 
 else
 
   # all other commands passed unchanged
   echo "$THISEXEC: issue remote command"
-  echo "$THISEXEC: EXEC: ssh $HOSTNAME $SERVEREXEC $LEXECARGS $COMMAND $LEXECAUXARGS $@"
+  echo "$THISEXEC: run: ssh $HOSTNAME $SERVEREXEC $LEXECARGS $COMMAND $LEXECAUXARGS $@"
   ssh $HOSTNAME $SERVEREXEC $LEXECARGS $COMMAND $LEXECAUXARGS $@
   
 fi
