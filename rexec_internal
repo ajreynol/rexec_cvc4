@@ -3,7 +3,7 @@
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
 # usage: rexec_internal 
-#   [local directory] [remote machine] [remote directory] 
+#   [local home directory] [remote machine] [remote home directory] 
 #   [remote ssh host name] [command] [code sync options] [remote command options]
 
 # ========================= static configuration
@@ -66,7 +66,7 @@ function computeBuildInfo
     exit 1
   fi
   # if there is a prefix
-  if [ -z $1 ]; then
+  if [ ! -z $1 ]; then
     # add the src prefix if it exists
     BINARYPREFIX="$BINARYPREFIX$1-"
     CARGS="$CARGS$1-"
@@ -199,24 +199,13 @@ fi
 
 
 # ========================= compute information on how to call remote
-BINARYNAME="cvc4"
 LEXECARGS="$BUILDTYPE"
 if [ ! -z $SRCSUFFIX ]; then
-  BINARYNAME="$SRCSUFFIX-$BINARYNAME"
   LEXECARGS="$LEXECARGS -p $SRCSUFFIX"
 fi
-if [ $BUILDTYPE = "prod" ]; then
-  BINARYNAME="$BINARYNAME"
-elif [ $BUILDTYPE = "debug" ]; then
-  BINARYNAME="d-$BINARYNAME"
-elif [ $BUILDTYPE = "debug-unit" ]; then
-  BINARYNAME="du-$BINARYNAME"
-elif [ $BUILDTYPE = "profile" ]; then
-  BINARYNAME="prof-$BINARYNAME"
-else
-  echo "$THISEXEC: ERROR: unknown build type $BUILDTYPE"
-  exit 1
-fi
+computeBuildInfo $SRCSUFFIX $BUILDTYPE
+echo "$THISEXEC: computeBuildInfo: binary name is $BINARYNAME"
+#echo "$THISEXEC: computeBuildInfo: configure arguments are $CARGS"
 # indicate local branch name
 if [ ! -z $INFOSRC ]; then
   LEXECLOCALINFO="$LEXECLOCALINFO -lbranch $INFOSRC"
@@ -230,7 +219,6 @@ if [ -z "$INFOSRCCHANGED" ]; then
 fi
 # local info is copied to remote
 LEXECARGS="$LEXECARGS $LEXECLOCALINFO"
-echo "$THISEXEC: binary name is $BINARYNAME"
 # ========================= end compute information on how to call remote
 
 
@@ -240,7 +228,7 @@ if [ -z $COMMAND ]; then
   exit 1
 fi
 echo "==============================================="
-echo "ISSUE: $COMMAND $LEXECAUXARGS $@"
+echo "SEND COMMAND: $COMMAND $LEXECAUXARGS $@"
 echo "LOCAL SOURCE: $INFOSTRING"
 echo "==============================================="
 # check valid command
