@@ -69,11 +69,14 @@
 
 # ========================= static configuration
 # the directory containing source trees $HOMEDIR/cvc4-*
-HOMEDIR="/home/andrew"
+HOMEDIR=$1
+shift
 # the remote machine
-REMOTE="ajreynol@linux.cs.uiowa.edu"
+REMOTE=$1
+shift
 # the directory containing source trees $RHOMEDIR/cvc4-* on the remote machine
-RHOMEDIR="/space/ajreynol"
+RHOMEDIR=$1
+shift
 # the directory containing the local build file structure
 BASEBUILDROOT="build-cvc4"
 BASEBUILDDIR="$HOMEDIR/$BASEBUILDROOT/"
