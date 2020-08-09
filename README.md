@@ -6,8 +6,12 @@
 
 # Basics
 
-The script `rexec` is used for managing multiple simultaneous builds of cvc4 via
-remote machine(s). It handles:
+The goal of these scripts is enable a flexible development paradigm for cvc4
+where remote machine(s) can be used while syncronizing code from a local
+machine.
+
+The script `rexec` is the main entry point that implements this development
+paradigm. It handles cases where the developer is using:
 - Multiple copies of the cvc4 source,
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
