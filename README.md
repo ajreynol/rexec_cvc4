@@ -15,16 +15,16 @@ Two build configurations: "debug" and "prod" for production.
 On the remote machine, the user maintains the following directories:
 
 >$RHOMEDIR/cvc4-stb
-$RHOMEDIR/cvc4-exp
+> $RHOMEDIR/cvc4-exp
 
 On the local machine, the user maintains the following directories:
 
 > $HOMEDIR/cvc4-stb
-$HOMEDIR/cvc4-exp
-$BASEBUILDDIR/stb/prod/
-$BASEBUILDDIR/stb/debug/
-$BASEBUILDDIR/exp/prod/
-$BASEBUILDDIR/exp/debug/
+> $HOMEDIR/cvc4-exp
+> $BASEBUILDDIR/stb/prod/
+> $BASEBUILDDIR/stb/debug/
+> $BASEBUILDDIR/exp/prod/
+> $BASEBUILDDIR/exp/debug/
 
 The first four contain working git clones of a (fork of) the cvc4 repo, which
 will be syncronized pairwise between local and remote(s). The latter four
