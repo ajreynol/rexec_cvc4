@@ -184,8 +184,8 @@ elif [ X$1 = X'-s' ]; then
     SYNCTYPE=$2
     shift
     shift
-    echo "$THISEXEC: EXEC: mksync_code $SYNCTYPE $SRCSUFFIX"
-    if ! mksync_code $SYNCTYPE $SRCSUFFIX; then
+    echo "$THISEXEC: EXEC: mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX"
+    if ! mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX; then
       echo "$THISEXEC: ERROR: failed to syncronize source"
       exit 1;
     fi

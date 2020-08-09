@@ -209,10 +209,10 @@ if [ ! -z "$REQUIRESSYNC" ]; then
       # we are now ensured that the branch/commit matches on local and remote
       # now, ensure we are in the same source code modification state (clean/dirty)
       if [ ! -z "$INFOSRCCHANGED" ]; then
-        # local is clean but remote is dirty (strange case where local reverted to clean after sync in a dirty state, on the same commit)
+        # local is clean but remote is dirty
         if [ ! -z $LOCALNOMODIFIED ]; then
-          # we know the sync is wrong, so this is an error
-          SYNCERROR="local is clean, but remote src is dirty"
+          # internal error, this case should be correct above
+          SYNCERROR="(internal error) local is clean, but remote src is dirty"
         fi
         # incremental modifications should continue to use manual sync -s
         if [ -z $LOCALSYNC ]; then
@@ -228,7 +228,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
       fi
     else
       # internal error, should never happen
-      SYNCERROR="local did not provide a commit number"
+      SYNCERROR="(internal error) local did not provide a commit number"
     fi
 
     if [ ! -z "$SYNCERROR" ]; then
