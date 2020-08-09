@@ -12,20 +12,19 @@ machine.
 
 The script `rexec` is the main entry point that implements this development
 paradigm. It handles cases where the developer is using:
-- Multiple copies of the cvc4 source,
+- Multiple active copies of the cvc4 source,
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
 The client script works in cooperation with a server script `lexec_lnx`, which
 can be installed on the remote machine via `rexec remotehost install-server`.
 
-# Background
+# Setup (example)
 
-We give the motivation through the following example.
 Say we want:
 
 * Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
-for stable, which are actively being developed on the local machine (in
-parallel) by the developer.
+for stable, which are actively being developed on the local machine in
+parallel by the developer.
 * Two build configurations: `debug` and `prod`, corresponding to debug
 and production builds of cvc4.
 
@@ -49,9 +48,8 @@ remote machine(s). For example, running:
 * `rexec remoteHost configure`
 
 in working directory `localhome/build/stb/prod` runs a call to configure the
-source directory `remoteHome/cvc4-stb` (containing a syncronized copy of the
-source code in `localhome/cvc4-stb/`) with build configuration `prod` on the
-remote machine `remoteHost`.
+the stable source `localhome/cvc4-stb/` on the remote machine `remoteHost`
+(for details, see below).
 
 Note that the local build directories may optionally contain local build files
 for the corresponding (source, build configuration) pairs. They can be
@@ -62,17 +60,9 @@ which case the developer can resort to building locally in the standard way
 
 TODO: automatic setup of remote git.
 
-
-The script allows for commands for testing cvc4 (e.g. `regress`) on the
-given remote machine(s). It also supports for creating and copying static
-binaries to the local machine (`rinstall`) with a naming schema. In particular,
-a successful `rinstall` command from `localhome/build/stb/debug/` will generate
-the static binary `debug-stb-cvc4` on the local machine.
-
 # Usage
 
-Assume a (single) remote machine `remoteHost`.
-After specifying the remote host, there are two main components of the command line to `rexec remoteHost ...`:
+Assume a remote machine `remoteHost`, there are two main components of the command line to `rexec remoteHost ...`:
 * What command to execute on the remote machine.
 * How do we want to syncronize the source code to the remote machine. This can
 either be manual or through git. The former may be preferred for performance
