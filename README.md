@@ -19,16 +19,22 @@ for stable.
 
 On the remote machine, the user maintains the following directories:
 
->$RHOMEDIR/cvc4-stb
-> $RHOMEDIR/cvc4-exp
+> $RHOMEDIR/cvc4-stb/
+
+> $RHOMEDIR/cvc4-exp/
 
 On the local machine, the user maintains the following directories:
 
-> $HOMEDIR/cvc4-stb
-> $HOMEDIR/cvc4-exp
+> $HOMEDIR/cvc4-stb/
+
+> $HOMEDIR/cvc4-exp/
+
 > $BASEBUILDDIR/stb/prod/
+
 > $BASEBUILDDIR/stb/debug/
+
 > $BASEBUILDDIR/exp/prod/
+
 > $BASEBUILDDIR/exp/debug/
 
 The first four contain working git clones of a (fork of) the cvc4 repo, which
@@ -107,7 +113,7 @@ Checkout branch `testBranch` on remote and local, run regressions with a 60 seco
 
 # Policy for automatic code syncronization
  
-Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not applicable:
+Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not relevant:
 
 | Branch match? | Commit match? | Local Modified? | Remote Modified? | Was -s sync used? | Action:                 | Notes                                          |
 |---------------|---------------|-----------------|------------------|-------------------|-------------------------|------------------------------------------------|
