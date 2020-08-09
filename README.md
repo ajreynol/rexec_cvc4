@@ -19,23 +19,17 @@ for stable.
 
 On the remote machine, the user maintains the following directories:
 
-> $RHOMEDIR/cvc4-stb/
-
-> $RHOMEDIR/cvc4-exp/
+> remoteHome/cvc4-stb/
+remoteHome/cvc4-exp/
 
 On the local machine, the user maintains the following directories:
 
-> $HOMEDIR/cvc4-stb/
-
-> $HOMEDIR/cvc4-exp/
-
-> $BASEBUILDDIR/stb/prod/
-
-> $BASEBUILDDIR/stb/debug/
-
-> $BASEBUILDDIR/exp/prod/
-
-> $BASEBUILDDIR/exp/debug/
+> localHome/cvc4-stb/
+localHome/cvc4-exp/
+localHome/build/stb/prod/
+localHome/build/stb/debug/
+localHome/build/exp/prod/
+localHome/build/exp/debug/
 
 The first four contain working git clones of a (fork of) the cvc4 repo, which
 will be syncronized pairwise between local and remote(s). The latter four
@@ -50,13 +44,13 @@ For example, running:
 
 > rexec myhostname configure
 
-in working directory `$BASEBUILDDIR/stb/prod` runs the configure.sh for
-using the source directory $RHOMEDIR/cvc4-stb with build configuration "prod".
+in working directory `localHome/build/stb/prod` runs the configure.sh for
+using the source directory remoteHome/cvc4-stb with build configuration "prod".
 
 The script allows for commands that test cvc4 (e.g. `regress`). It also supports
 for creating and copying static binaries to the local machine (`rinstall`)
 with a naming schema. In particular, a successful `rinstall` command from
-`$BASEBUILDDIR/stb/debug/` will generate the static binary `debug-stb-cvc4`
+`localHome/build/stb/debug/` will generate the static binary `debug-stb-cvc4`
 on the local machine.
 
 # Usage
@@ -77,7 +71,7 @@ Install a copy of the server script to the remote machine.
 Print debug information on the local and remote source and binaries.
 * `rinstall`
 Remote install to local. Builds and copies a static binary of the current
-(source, build config) to `$HOMEDIR/bin` on the local machine.
+(source, build config) to `localHome/bin` on the local machine.
 * `reset`
 Delete the remote's build directory for the current (source, build config).
 * `reset-all`
@@ -115,7 +109,7 @@ Checkout branch `testBranch` on remote and local, run regressions with a 60 seco
  
 Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not relevant:
 
-| Branch match? | Commit match? | Local Modified? | Remote Modified? | Was -s sync used? | Action:                 | Notes                                          |
+| Branch match? | Commit match? | Local Modified? | Remote Modified? | Was `-s` used? | Action:                 | Notes                                          |
 |---------------|---------------|-----------------|------------------|-------------------|-------------------------|------------------------------------------------|
 | Yes           | Yes           | Yes             | N/A              | Yes               | (none)                  |                                                |
 | Yes           | Yes           | Yes             | N/A              | No                | `warning: use -s`         | OK if local has no changes since last `-s`       |
@@ -125,3 +119,6 @@ Internally, the server script implements the following policy for code syncroniz
 | Yes           | Yes           | No              | No               | N/A               | (none)                  |                                                |
 | Yes           | No            | No              | N/A              | N/A               | force -r                |                                                |
 | No            | No            | No              | N/A              | N/A               | force -b                |                                                |
+
+This is implemented by having the client script communicate the local code state via command
+line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script.
