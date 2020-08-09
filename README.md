@@ -17,21 +17,16 @@ As an example, say we want:
 for stable.
 * Two build configurations: `debug` and `prod` for production.
 
-On the remote machine, the user maintains the following directories:
-
-> remoteHome/cvc4-stb/
-remoteHome/cvc4-exp/
-
 On the local machine, the user maintains the following directories:
 
-> localHome/cvc4-stb/
-localHome/cvc4-exp/
-localHome/build/stb/prod/
-localHome/build/stb/debug/
-localHome/build/exp/prod/
-localHome/build/exp/debug/
+* localHome/cvc4-stb/
+* localHome/cvc4-exp/
+* localHome/build/stb/prod/
+* localHome/build/stb/debug/
+* localHome/build/exp/prod/
+* localHome/build/exp/debug/
 
-The first four contain working git clones of a (fork of) the cvc4 repo, which
+The first two contain working git clones of a (fork of) the cvc4 repo, which
 will be syncronized pairwise between local and remote(s). The latter four
 contain (optionally, in case of loss of connection to remote machines) contain
 local build files for the corresponding (source, build configuration), which
@@ -41,6 +36,8 @@ directories.
 The user may issue remote calls from the local build directories, where the
 current directory determines the remote (source, build configuration) copies.
 For example, running:
+
+TODO: automatic setup of remote git.
 
 > rexec myhostname configure
 
@@ -109,16 +106,16 @@ Checkout branch `testBranch` on remote and local, run regressions with a 60 seco
  
 Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not relevant:
 
-| Branch match? | Commit match? | Local Modified? | Remote Modified? | Was `-s` used? | Action:                 | Notes                                          |
-|---------------|---------------|-----------------|------------------|-------------------|-------------------------|------------------------------------------------|
-| Yes           | Yes           | Yes             | N/A              | Yes               | (none)                  |                                                |
+| Branch match? | Commit match? | Local Modified? | Remote Modified? | Was `-s` used?    | Action:                   | Notes                                            |
+|---------------|---------------|-----------------|------------------|-------------------|---------------------------|--------------------------------------------------|
+| Yes           | Yes           | Yes             | N/A              | Yes               | (none)                    |                                                  |
 | Yes           | Yes           | Yes             | N/A              | No                | `warning: use -s`         | OK if local has no changes since last `-s`       |
-| Yes           | No            | Yes             | N/A              | N/A               | force -r, `error: use -s` |                                                |
-| No            | No            | Yes             | N/A              | N/A               | force -b,` error: use -s` |                                                |
-| Yes           | Yes           | No              | Yes              | N/A               | force -r                | Only happens if local reverts changes after `-s` |
-| Yes           | Yes           | No              | No               | N/A               | (none)                  |                                                |
-| Yes           | No            | No              | N/A              | N/A               | force -r                |                                                |
-| No            | No            | No              | N/A              | N/A               | force -b                |                                                |
+| Yes           | No            | Yes             | N/A              | N/A               | force -r, `error: use -s` |                                                  |
+| No            | No            | Yes             | N/A              | N/A               | force -b,` error: use -s` |                                                  |
+| Yes           | Yes           | No              | Yes              | N/A               | force -r                  | Only happens if local reverts changes after `-s` |
+| Yes           | Yes           | No              | No               | N/A               | (none)                    |                                                  |
+| Yes           | No            | No              | N/A              | N/A               | force -r                  |                                                  |
+| No            | No            | No              | N/A              | N/A               | force -b                  |                                                  |
 
 This is implemented by having the client script communicate the local code state via command
 line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script.
