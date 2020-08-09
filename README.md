@@ -128,12 +128,12 @@ Run regressions with a 60 second timeout (determined by `CVC4_REGRESSION_ARGS` a
  
 Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not relevant:
 
-| Branch match? | Commit match? | Local Modified? | Remote Modified? | Was `-s` used?    | Action:                       | Notes                                            |
+| Branch match? | Commit match? | Local Modified? | Remote Modified? | Used `-s`?        | Action:                       | Notes                                            |
 |---------------|---------------|-----------------|------------------|-------------------|-------------------------------|--------------------------------------------------|
 | Yes           | Yes           | Yes             | N/A              | Yes               | (none)                        |                                                  |
-| Yes           | Yes           | Yes             | N/A              | No                | `warning: use -s`             | OK if local has no changes since last `-s`       |
-| Yes           | No            | Yes             | N/A              | N/A               | force -r, `error: use -s`     |                                                  |
-| No            | No            | Yes             | N/A              | N/A               | force -b,` error: use -s`     |                                                  |
+| Yes           | Yes           | Yes             | N/A              | No                | warning: use -s               | OK if local has no changes since last `-s`       |
+| Yes           | No            | Yes             | N/A              | N/A               | force -r, error: use -s       |                                                  |
+| No            | No            | Yes             | N/A              | N/A               | force -b, error: use -s       |                                                  |
 | Yes           | Yes           | No              | Yes              | N/A               | force -r                      | Only happens if local reverts changes after `-s` |
 | Yes           | Yes           | No              | No               | N/A               | (none)                        |                                                  |
 | Yes           | No            | No              | N/A              | N/A               | force -r                      |                                                  |
