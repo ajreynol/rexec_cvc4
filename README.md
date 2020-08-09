@@ -42,30 +42,35 @@ for
 # Commands:
 
 ### `install-server` : 
-  Install a copy of the server script to the remote machine.
+Install a copy of the server script to the remote machine.
 ### `info` :
-  Print debug information on the local and remote source and binaries.
+Print debug information on the local and remote source and binaries.
 ### `rinstall` : 
-  Remote install to local. Builds and copies a static binary of the current
-  (source, build config) to $HOMEDIR/bin on the local machine.
+Remote install to local. Builds and copies a static binary of the current
+(source, build config) to $HOMEDIR/bin on the local machine.
 ### `reset` : 
-  Delete the remote's build directory for the current (source, build config).
+Delete the remote's build directory for the current (source, build config).
 ### `reset-all` : 
-  Delete the remote's entire build directory.
+Delete the remote's entire build directory.
 ### `configure :
-  Runs configure.sh on remote for the current (source, build config).
+Runs configure.sh on remote for the current (source, build config).
 ### `install|regress|ctest|units|clean`: 
-  Issues a command in the remote's build directory.
+Issues a command in the remote's build directory.
 ### `checkout [branch name]`
-  Syntax sugar for `info -b [branch name]`.
+Syntax sugar for `info -b [branch name]`.
 
 # Code syncronization options to rexec:
 
--B [branch name] : Switch to branch local and remote.
--b [branch name] : Switch to branch remote. Use if you changed branches manually on local independent of this script.
--c [commit message] : Commit to local, rebase remote.
--r : Rebase remote (not recommended to use this manually)
--s [syncronize type] : Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
+### `-B [branch name]`
+Switch to branch local and remote.
+### `-b [branch name]`
+Switch to branch on remote. Use if you changed branches manually on local independent of this script.
+### `-c [commit message]`
+Commit to local, rebase remote.
+### `-r`
+Rebase remote (not recommended to use this manually)
+### `-s [syncronize type]`
+Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
 
 # Automatic code syncronization:
  
