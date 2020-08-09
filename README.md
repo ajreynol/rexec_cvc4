@@ -2,7 +2,9 @@
 
 # Usage:
 
-`rexec [remote host name] [command] [code sync options] [remote command options]`
+`rexec [remote host name] [remote command] [code sync options] [remote command options]`
+
+See details on these arguments below.
 
 # Basics
 
@@ -12,11 +14,13 @@ machine.
 
 The script `rexec` is the main entry point that implements this development
 paradigm. It handles cases where the developer is using:
-- Multiple active copies of the cvc4 source,
+- Multiple active copies of the cvc4 source in cloned git repositories,
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
 The client script works in cooperation with a server script `lexec_lnx`, which
-can be installed on the remote machine via `rexec remotehost install-server`.
+can be installed on a remote machine `remotehost` via:
+
+`rexec remotehost install-server`.
 
 # Setup (example)
 
@@ -45,7 +49,7 @@ may otherwise use the `rexec` to manage certain git commands (see below).
 The other four directories are working directories for issuing commands on
 remote machine(s). For example, running:
 
-* `rexec remoteHost configure`
+`rexec remoteHost configure`
 
 in working directory `localhome/build/stb/prod` runs a call to configure the
 the stable source `localhome/cvc4-stb/` on the remote machine `remoteHost`
@@ -141,4 +145,8 @@ Internally, the server script implements the following policy for code syncroniz
 
 This is implemented by having the client script communicate the local code state via command
 line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script. Thus, in all
-cases, the server script knows which case we are in.
+cases, the server script knows which case we are in. The above policy aims to do as little work
+as possible while maintaining assurance that the code is syncronized. In five of the eight cases
+above, the server does its best effort to syncronize by forcing a rebase `r` or branch `b`
+but in two such cases, syncronization is known to be wrong (cases 3 and 4) and the server script aborts.
+In one case, syncronization is unknown by the remote machine, and a warning is given instead (case 2).
