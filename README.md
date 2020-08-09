@@ -1,5 +1,9 @@
 # Remote development of cvc4
 
+# Usage:
+
+`rexec [remote host name] [command] [code sync options] [remote command options]`
+
 # Background:
 
 The script `rexec` is used for managing multiple simultaneous builds of cvc4 via
@@ -49,7 +53,17 @@ with a naming schema. In particular, a successful `rinstall` command from
 `$BASEBUILDDIR/stb/debug/` will generate the static binary `debug-stb-cvc4`
 on the local machine.
 
-# Commands:
+# Usage
+
+The common use case of the script is to run for a fixed remote machine, call it
+`remoteHost`. There are two main components of the remainder of the command
+line:
+* What command to execute on the remote machine.
+* How do we want to syncronize the source code to the remote machine. This can
+either be manual or through git. The former may be preferred for performance
+and for keeeping a cleaner git log.
+
+### Commands:
 
 * `install-server`
 Install a copy of the server script to the remote machine.
@@ -57,7 +71,7 @@ Install a copy of the server script to the remote machine.
 Print debug information on the local and remote source and binaries.
 * `rinstall`
 Remote install to local. Builds and copies a static binary of the current
-(source, build config) to $HOMEDIR/bin on the local machine.
+(source, build config) to `$HOMEDIR/bin` on the local machine.
 * `reset`
 Delete the remote's build directory for the current (source, build config).
 * `reset-all`
@@ -69,22 +83,31 @@ Issues a command in the remote's build directory.
 * `checkout [branch name]`
 Syntax sugar for `info -b [branch name]`.
 
-# Code syncronization options to rexec:
+### Code syncronization options to rexec:
 
-### `-B [branch name]`
+* `-B [branch name]`
 Switch to branch local and remote.
-### `-b [branch name]`
-Switch to branch on remote. Use if you changed branches manually on local independent of this script.
-### `-c [commit message]`
+* `-b [branch name]`
+Switch to branch on remote. Use this option if you changed branches manually on local independent of this script.
+* `-c [commit message]`
 Commit to local, rebase remote.
-### `-r`
-Rebase remote (not recommended to use this manually)
-### `-s [syncronize type]`
+* `-r`
+Rebase remote (not recommended to use this manually).
+* `-s [syncronize type]`
 Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
 
-# Automatic code syncronization:
+# Examples:
+
+* `rexec remoteHost rinstall -B testBranch`
+Checkout branch `testBranch` on remote and local, install the binary from the remote machine to the local machine.
+* `rexec remoteHost regress -s src`
+Syncronize the local source to remote if the src/ directory was modified locally and run regressions.
+* `rexec remoteHost regress -B testBranch CVC4_REGRESSION_ARGS=--tlimit=60000`
+Checkout branch `testBranch` on remote and local, run regressions with a 60 second timeout (determined by `CVC4_REGRESSION_ARGS` above).
+
+# Policy for automatic code syncronization
  
-Internally, the server script implements the following policy for code syncronization:
+Internally, the server script implements the following policy for code syncronization, where `N/A` indicates that the information is not applicable:
 
 | Branch match? | Commit match? | Local Modified? | Remote Modified? | Was -s sync used? | Action:                 | Notes                                          |
 |---------------|---------------|-----------------|------------------|-------------------|-------------------------|------------------------------------------------|
