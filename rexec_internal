@@ -23,6 +23,8 @@ BASEBUILDDIR="$HOMEDIR/$BASEBUILDROOT/"
 THISEXEC="rexec"
 # the name of the server script
 SERVEREXEC="lexec_lnx"
+# extra scp arguments
+SCPAUXARGS="-P 40"
 # ========================= end static configuration
 
 # ================================================== shared method library
@@ -43,33 +45,33 @@ function computeSrcInfo
     INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8}]"
   fi
 }
-# Compute build information (binary name and configure options) for given source prefix $1 and build type $2
+# Compute build information (binary name and configure options) for given build type $1 and optional source prefix $2
 # Store result in $BINARYNAME / $CARGS
 function computeBuildInfo
 {
   BASEBINARYNAME="cvc4"
-  if [ $2 = "prod" ]; then
+  if [ $1 = "prod" ]; then
     # production has the default prefix
     BINARYPREFIX=""
     CARGS="production --static --program-prefix="
-  elif [ $2 = "debug" ]; then
+  elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing --program-prefix=d-"
-  elif [ $2 = "debug-unit" ]; then
+  elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
     CARGS="debug --program-prefix=du-"
-  elif [ $2 = "profile" ]; then
+  elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
     CARGS="production --static --profiling --program-prefix=prof-"
   else
-    echo "$THISEXEC: ERROR: unknown build type $2"
+    echo "$THISEXEC: ERROR: unknown build type $1"
     exit 1
   fi
   # if there is a prefix
-  if [ ! -z $1 ]; then
+  if [ ! -z $2 ]; then
     # add the src prefix if it exists
-    BINARYPREFIX="$BINARYPREFIX$1-"
-    CARGS="$CARGS$1-"
+    BINARYPREFIX="$BINARYPREFIX$2-"
+    CARGS="$CARGS$2-"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -135,8 +137,8 @@ if [ X$1 = X'-B' ] || [ $COMMAND = "checkout" ]; then
     exit 1
   fi
   if [ $COMMAND = "checkout" ]; then
-    # local checkout command becomes info on remote
-    COMMAND="info"
+    # local checkout command becomes none command on remote
+    COMMAND="none"
   fi
   # checkout a fresh copy of a different branch on local and remote
   BRANCHNAME=$2
@@ -203,7 +205,7 @@ LEXECARGS="$BUILDTYPE"
 if [ ! -z $SRCSUFFIX ]; then
   LEXECARGS="$LEXECARGS -p $SRCSUFFIX"
 fi
-computeBuildInfo $SRCSUFFIX $BUILDTYPE
+computeBuildInfo $BUILDTYPE $SRCSUFFIX
 echo "$THISEXEC: computeBuildInfo: binary name is $BINARYNAME"
 #echo "$THISEXEC: computeBuildInfo: configure arguments are $CARGS"
 # indicate local branch name
@@ -232,7 +234,7 @@ echo "SEND COMMAND: $COMMAND $LEXECAUXARGS $@"
 echo "LOCAL SOURCE: $INFOSTRING"
 echo "==============================================="
 # check valid command
-if ! [[ "$COMMAND" =~ ^(install-server|install-file|rinstall|install|regress|ctest|configure|units|clean|reset|reset-all|info|none)$ ]]; then
+if ! [[ "$COMMAND" =~ ^(install-server|install-file|rinstall|install|regress|ctest|configure|units|clean|reset|reset-all|info|exec|none)$ ]]; then
   echo "$THISEXEC: ERROR: unknown command $COMMAND"
   exit 1
 fi
@@ -240,8 +242,8 @@ fi
 if [ $COMMAND = "install-server" ]; then
 
   # install the server script on the remote machine
-  echo "$THISEXEC: EXEC: scp -P 40 $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin"
-  scp -P 40 $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin
+  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin"
+  scp $SCPAUXARGS $HOMEDIR/bin/$SERVEREXEC $REMOTE:$RHOMEDIR/bin
 
 elif [ $COMMAND = "install-file" ]; then
 
@@ -250,8 +252,8 @@ elif [ $COMMAND = "install-file" ]; then
   shift
 
   # install the server script on the remote machine
-  echo "$THISEXEC: EXEC: scp -P 40 $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin"
-  scp -P 40 $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin
+  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin"
+  scp $SCPAUXARGS $HOMEDIR/bin/$FILENAME $REMOTE:$RHOMEDIR/bin
   
 elif [ $COMMAND = "rinstall" ]; then
 
@@ -261,8 +263,8 @@ elif [ $COMMAND = "rinstall" ]; then
   ssh $HOSTNAME $SERVEREXEC $LEXECARGS install $LEXECAUXARGS $@
   # scp the binary
   echo "$THISEXEC: issue binary copy command"
-  echo "$THISEXEC: EXEC: scp -P 40 $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
-  scp -P 40 $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
+  echo "$THISEXEC: EXEC: scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
+  scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
 
 else
 

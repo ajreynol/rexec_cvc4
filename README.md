@@ -94,7 +94,7 @@ Syntax sugar for `info -b [branch name]`.
 * `-B [branch name]`
 Switch to branch local and remote.
 * `-b [branch name]`
-Switch to branch on remote. Use this option if you changed branches manually on local independent of this script.
+Switch to branch on remote. Use this option if you changed branches manually on the local copy, independent of this script.
 * `-c [commit message]`
 Commit to local, rebase remote.
 * `-r`
@@ -118,10 +118,10 @@ Internally, the server script implements the following policy for code syncroniz
 | Branch match? | Commit match? | Local Modified? | Remote Modified? | Was -s sync used? | Action:                 | Notes                                          |
 |---------------|---------------|-----------------|------------------|-------------------|-------------------------|------------------------------------------------|
 | Yes           | Yes           | Yes             | N/A              | Yes               | (none)                  |                                                |
-| Yes           | Yes           | Yes             | N/A              | No                | *warning*: use -s         | OK if local has no changes since last -s       |
-| Yes           | No            | Yes             | N/A              | N/A               | force -r, *error*: use -s |                                                |
-| No            | No            | Yes             | N/A              | N/A               | force -b, *error*: use -s |                                                |
-| Yes           | Yes           | No              | Yes              | N/A               | force -r                | Only happens if local reverts changes after -s |
+| Yes           | Yes           | Yes             | N/A              | No                | `warning: use -s`         | OK if local has no changes since last `-s`       |
+| Yes           | No            | Yes             | N/A              | N/A               | force -r, `error: use -s` |                                                |
+| No            | No            | Yes             | N/A              | N/A               | force -b,` error: use -s` |                                                |
+| Yes           | Yes           | No              | Yes              | N/A               | force -r                | Only happens if local reverts changes after `-s` |
 | Yes           | Yes           | No              | No               | N/A               | (none)                  |                                                |
 | Yes           | No            | No              | N/A              | N/A               | force -r                |                                                |
 | No            | No            | No              | N/A              | N/A               | force -b                |                                                |

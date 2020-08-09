@@ -30,33 +30,33 @@ function computeSrcInfo
     INFOSTRING="[$INFOSRC ${INFOSRCCOMMIT:0:8}]"
   fi
 }
-# Compute build information (binary name and configure options) for given source prefix $1 and build type $2
+# Compute build information (binary name and configure options) for given build type $1 and optional source prefix $2
 # Store result in $BINARYNAME / $CARGS
 function computeBuildInfo
 {
   BASEBINARYNAME="cvc4"
-  if [ $2 = "prod" ]; then
+  if [ $1 = "prod" ]; then
     # production has the default prefix
     BINARYPREFIX=""
     CARGS="production --static --program-prefix="
-  elif [ $2 = "debug" ]; then
+  elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing --program-prefix=d-"
-  elif [ $2 = "debug-unit" ]; then
+  elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
     CARGS="debug --program-prefix=du-"
-  elif [ $2 = "profile" ]; then
+  elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
     CARGS="production --static --profiling --program-prefix=prof-"
   else
-    echo "$THISEXEC: ERROR: unknown build type $2"
+    echo "$THISEXEC: ERROR: unknown build type $1"
     exit 1
   fi
   # if there is a prefix
-  if [ ! -z $1 ]; then
+  if [ ! -z $2 ]; then
     # add the src prefix if it exists
-    BINARYPREFIX="$BINARYPREFIX$1-"
-    CARGS="$CARGS$1-"
+    BINARYPREFIX="$BINARYPREFIX$2-"
+    CARGS="$CARGS$2-"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -198,12 +198,12 @@ if [ ! -z "$REQUIRESSYNC" ]; then
   # ensure the same branch as local, or else something went wrong
   if [ ! -z $LOCALBRANCHREF ]; then
     if [ $LOCALBRANCHREF != $INFOSRC ]; then
-      echo "$THISEXEC: ERROR: branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
+      echo "$THISEXEC: ERROR: (internal error) branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
       exit 1
     fi
     if [ ! -z $LOCALCOMMITREF ]; then
       if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
-        echo "$THISEXEC: ERROR: branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
+        echo "$THISEXEC: ERROR: (internal error) branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
         exit 1
       fi
       # we are now ensured that the branch/commit matches on local and remote
@@ -248,7 +248,7 @@ fi
 
 
 # ========================= compute build and configuration information
-computeBuildInfo $SRCPREFIX $BUILDTYPE
+computeBuildInfo $BUILDTYPE $SRCPREFIX
 echo "$THISEXEC: binary name is $BINARYNAME"
 # ========================= end compute build and configuration information
 
@@ -276,6 +276,16 @@ elif [ $COMMAND = "regress" ] || [ $COMMAND = "units" ] || [ $COMMAND = "clean" 
   cd $BUILDDIR
   echo "$THISEXEC: EXEC: make $COMMAND -j8 $@"
   make $COMMAND -j8 $@
+  
+elif [ $COMMAND = "exec" ]; then
+
+  # a custom executable
+  EXECNAME=$1
+  shift
+  echo "$THISEXEC: EXEC: cd $BUILDDIR"
+  cd $BUILDDIR
+  echo "$THISEXEC: EXEC: $EXECNAME $@"
+  $EXECNAME $@
   
 elif [ $COMMAND = "configure" ]; then
 
