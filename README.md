@@ -9,8 +9,9 @@ remote machine(s). It handles:
 
 As an example, say we want:
 
-Two source copies of cvc4: "exp" for experimental and "stb" for stable.
-Two build configurations: "debug" and "prod" for production.
+* Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
+for stable.
+* Two build configurations: `debug` and `prod` for production.
 
 On the remote machine, the user maintains the following directories:
 
@@ -50,22 +51,22 @@ on the local machine.
 
 # Commands:
 
-### `install-server` : 
+* `install-server`
 Install a copy of the server script to the remote machine.
-### `info` :
+* `info`
 Print debug information on the local and remote source and binaries.
-### `rinstall` : 
+* `rinstall`
 Remote install to local. Builds and copies a static binary of the current
 (source, build config) to $HOMEDIR/bin on the local machine.
-### `reset` : 
+* `reset`
 Delete the remote's build directory for the current (source, build config).
-### `reset-all` : 
+* `reset-all`
 Delete the remote's entire build directory.
-### `configure :
+* `configure`
 Runs configure.sh on remote for the current (source, build config).
-### `install|regress|ctest|units|clean`: 
+* `install|regress|ctest|units|clean`: 
 Issues a command in the remote's build directory.
-### `checkout [branch name]`
+* `checkout [branch name]`
 Syntax sugar for `info -b [branch name]`.
 
 # Code syncronization options to rexec:
