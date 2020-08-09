@@ -6,51 +6,61 @@
 
 # Background:
 
+### Basics
+
 The script `rexec` is used for managing multiple simultaneous builds of cvc4 via
 remote machine(s). It handles:
 - Multiple copies of the cvc4 source,
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
+The client script works in cooperation with a server script `lexec_lnx`, which
+can be installed on the remote machine via `rexec remotehost install-server`.
+
+### Setup
+
 As an example, say we want:
 
 * Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
 for stable.
-* Two build configurations: `debug` and `prod` for production.
+* Two build configurations: `debug` and `prod`.
 
-On the local machine, the user maintains the following directories, assuming
-a local home directory `localhome`:
+On the local machine, the developer maintains the following working directories,
+assuming a local home directory `localhome`:
 
 * `localhome/cvc4-stb/`
-* `localhome/cvc4-exp/`
 * `localhome/build-cvc4/stb/prod/`
 * `localhome/build-cvc4/stb/debug/`
+* `localhome/cvc4-exp/`
 * `localhome/build-cvc4/exp/prod/`
 * `localhome/build-cvc4/exp/debug/`
 
-The first two contain working git clones of a (fork of) the cvc4 repo, which
-will be syncronized pairwise between local and remote(s). The latter four
-contain (optionally, in case of loss of connection to remote machines) contain
-local build files for the corresponding (source, build configuration), which
-can be initialized by `configure_cvc4_local` running from the local source
-directories.
+The first and fourth contain working git clones of a (fork of) the cvc4 repo. 
+The developer may issue git commands as usual in these directories, as desired.
 
-The user may issue remote calls from the local build directories, where the
-current directory determines the remote (source, build configuration) copies.
-For example, running:
+The other four directories are working directories for issuing remote build
+commands. For example, running:
 
 * `rexec remoteHost configure`
 
-in working directory `localhome/build/stb/prod` runs the configure.sh for
-using the source directory remoteHome/cvc4-stb with build configuration "prod".
+in working directory `localhome/build/stb/prod` runs a call to configure the
+source directory `remoteHome/cvc4-stb` with build configuration `prod` on the
+remote machine `remoteHost`.
 
-The script allows for commands that test cvc4 (e.g. `regress`). It also supports
-for creating and copying static binaries to the local machine (`rinstall`)
-with a naming schema. In particular, a successful `rinstall` command from
-`localhome/build/stb/debug/` will generate the static binary `debug-stb-cvc4`
-on the local machine.
-
+Note that the local build directories may optionally contain local build files
+for the corresponding (source, build configuration) pairs. They can be
+initialized by `configure_cvc4_local` running from the local source directories.
+This is important in the case of loss of connection with remote machine(s), in
+which case the developer can resort to building locally in the standard way
+(e.g. `make regress`).
 
 TODO: automatic setup of remote git.
+
+
+The script allows for commands for testing cvc4 (e.g. `regress`) on the
+given remote machine(s). It also supports for creating and copying static
+binaries to the local machine (`rinstall`) with a naming schema. In particular,
+a successful `rinstall` command from `localhome/build/stb/debug/` will generate
+the static binary `debug-stb-cvc4` on the local machine.
 
 # Usage
 
@@ -68,7 +78,7 @@ Install a copy of the server script to the remote machine.
 * `info`
 Print debug information on the local and remote source and binaries.
 * `rinstall`
-Remote install to local. Builds and copies a static binary of the current
+Remote install to local machine: builds and copies a static binary of the current
 (source, build config) to `localhome/bin` on the local machine.
 * `reset`
 Delete the remote's build directory for the current (source, build config).
@@ -80,6 +90,12 @@ Runs configure.sh on remote for the current (source, build config).
 Issues a command in the remote's build directory.
 * `checkout [branch name]`
 Syntax sugar for `info -b [branch name]`.
+
+###### Expert options:
+* `exec [executable]`
+Run executable from remote build directory
+* `install-file [file]`
+Install custom file from local `bin/` to remote `bin/`.
 
 ### Code syncronization options to rexec:
 
@@ -96,12 +112,14 @@ Syncronize code local to remote. Use if you made code changes that you don't wan
 
 # Examples:
 
+* `rexec remoteHost regress -B testBranch`
+Checkout branch `testBranch` on remote and local, run regressions on remote.
 * `rexec remoteHost rinstall -B testBranch`
-Checkout branch `testBranch` on remote and local, install the binary from the remote machine to the local machine.
+Checkout branch `testBranch` on remote and local, install on remote and copy the binary from the remote machine to the local machine.
 * `rexec remoteHost regress -s src`
 Syncronize the local source to remote if the src/ directory was modified locally and run regressions.
-* `rexec remoteHost regress -B testBranch CVC4_REGRESSION_ARGS=--tlimit=60000`
-Checkout branch `testBranch` on remote and local, run regressions with a 60 second timeout (determined by `CVC4_REGRESSION_ARGS` above).
+* `rexec remoteHost regress CVC4_REGRESSION_ARGS=--tlimit=60000`
+Run regressions with a 60 second timeout (determined by `CVC4_REGRESSION_ARGS` above). Code syncronization is automatically inferred when not provided based on the policy below.
 
 # Policy for automatic code syncronization
  
