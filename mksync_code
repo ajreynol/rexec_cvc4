@@ -55,11 +55,10 @@ fi
 shift
 # ========================= end compute the sync directories
 
-
 # ========================= run syncronization
 # rsync remote with local, based on config
-echo "$THISEXEC: run: rsync -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
-rsync -chazP -e "ssh -p 40" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS
+echo "$THISEXEC: run: rsync --existing -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
+rsync --existing -chazP -e "ssh -p 40" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS
 # ========================= end run syncronization
 
 echo "$THISEXEC: finished $@"

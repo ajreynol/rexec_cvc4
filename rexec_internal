@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #TODO: fix issue with CVC4_REGRESSION_ARGS with multiple arguments
-#TODO: don't rinstall when compilation fails
+#TODO: don't rinstall when compilation fails: return value?
 #TODO: -F to force reset/configure first
 #TODO: COMMAND: clean-src: git clean remote src
 #TODO: COMMAND: clone: git setup, auto-install dependencies?

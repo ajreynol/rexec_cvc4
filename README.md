@@ -18,9 +18,7 @@ paradigm. It handles cases where the developer is using:
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
 The client script works in cooperation with a server script `lexec_lnx`, which
-can be installed on a remote machine `remotehost` via:
-
-`rexec remotehost install-server`.
+can be installed on a remote machine `remotehost` via `rexec remotehost install-server`.
 
 # Setup (example)
 
@@ -52,8 +50,8 @@ remote machine(s). For example, running:
 `rexec remoteHost configure`
 
 in working directory `localhome/build/stb/prod` runs a call to configure the
-the stable source `localhome/cvc4-stb/` on the remote machine `remoteHost`
-(for details, see below).
+production build of the stable source `localhome/cvc4-stb/` on the remote
+machine `remoteHost` (for details, see below).
 
 Note that the local build directories may optionally contain local build files
 for the corresponding (source, build configuration) pairs. They can be
@@ -82,45 +80,51 @@ remotely).
 
 * `install-server`
 Install a copy of the server script to the remote machine.
-* `info`
-Print debug information on the local and remote source and binaries.
 * `rinstall`
-Remote install to local machine: builds and copies a static binary of the current
-(source, build config) to `localhome/bin` on the local machine.
+Remote install to local machine: builds a (static) binary on the remote machine,
+and then copies this binary to `localhome/bin` on the local machine.
+* `install|regress|ctest|units|clean`: 
+Issues a command in the remote's build directory.
 * `reset`
 Delete the remote's build directory for the current (source, build config).
 * `reset-all`
 Delete the remote's entire build directory.
 * `configure`
 Runs configure.sh on remote for the current (source, build config).
-* `install|regress|ctest|units|clean`: 
-Issues a command in the remote's build directory.
+* `info`
+Print debug information on the local and remote source and binaries.
+* `none`
+Connect to the remote machine but do nothing.
 * `checkout [branch name]`
-Syntax sugar for `info -b [branch name]`.
+Syntax sugar for `none -B [branch name]`.
 
 ###### Expert options:
+
 * `exec [executable]`
 Run executable from remote build directory
 * `install-file [file]`
-Install custom file from local `bin/` to remote `bin/`.
+Install custom file from `localhome/bin/` to `remotehome/bin/` on the remote machine.
 
 ### Code syncronization options to rexec:
 
 * `-B [branch name]`
 Switch to branch local and remote.
-* `-b [branch name]`
-Switch to branch on remote. Use this option if you changed branches manually on the local copy, independent of this script.
 * `-c [commit message]`
 Commit to local, rebase remote.
+* `-s [syncronize type]`
+Syncronize code local to remote. Use if you made code changes on the local machine that you don't want to commit to git.
+Syncronization type is one of the following:
+  - `src`: Syncronize the `src/` subdirectory.
+  - `test`: Syncronize the `test/` subdirectory.
+  - `dev`: Syncronize the `src/` and `test/` subdirectories.
+  - `all`: Syncronize the entire local repository (not recommended).
+
+###### Expert options:
+
+* `-b [branch name]`
+Switch to branch on remote (not recommended to use this manually).
 * `-r`
 Rebase remote (not recommended to use this manually).
-* `-s [syncronize type]`
-Syncronize code local to remote. Use if you made code changes that you don't want to commit to git.
-Syncronization type is one of the following:
-  - src: Syncronize the `src/` subdirectory.
-  - test: Syncronize the `test/` subdirectory.
-  - dev: Syncronize the `src/` and `test/` subdirectories.
-  - all: Syncronize the entire repo (not recommended).
 
 # Examples:
 
@@ -148,8 +152,8 @@ Internally, the server script implements the following policy for code syncroniz
 | Yes           | No            | No              | N/A              | N/A               | force -r                      |                                                  |
 | No            | No            | No              | N/A              | N/A               | force -b                      |                                                  |
 
-This is implemented by having the client script communicate the local code state via command
-line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) to the server script. Thus, in all
+This is implemented by having the client script communicate the local code state via auto-generated command
+line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) when calling the server script. Thus, in all
 cases, the server script knows which case we are in. The above policy aims to do as little work
 as possible while maintaining assurance that the code is syncronized. In five of the eight cases
 above, the server does its best effort to syncronize by forcing a rebase `-r` or branch `-b`

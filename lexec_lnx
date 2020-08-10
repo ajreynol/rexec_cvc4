@@ -2,6 +2,9 @@
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The server script
 
+# usage: lexec_lnx
+#   [build type] ([source prefix])? ([local sync information])? [remote command] [sync command] [remote command arguments]
+
 # ========================= static configuration
 # the directory on the remote machine source trees $HOMEDIR/cvc4-*
 HOMEDIR="/space/ajreynol"
@@ -215,7 +218,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
   else
     if [ $LOCALBRANCHREF != $INFOSRC ]; then
       # internal error, something went wrong with remote git?
-      echo "$THISEXEC: ERROR: (internal error) branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
+      echo "$THISEXEC: ERROR: branch mismatch: local [$LOCALBRANCHREF], remote [$INFOSRC], use -B $LOCALBRANCHREF or -b $LOCALBRANCHREF to sync."
       exit 1
     fi
     if [ -z $LOCALCOMMITREF ]; then
@@ -224,7 +227,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
     else
       if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
         # internal error, something went wrong with remote git?
-        echo "$THISEXEC: ERROR: (internal error) branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
+        echo "$THISEXEC: ERROR: branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
         exit 1
       fi
       # we are now ensured that the branch/commit matches on local and remote
@@ -232,7 +235,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
       if [ ! -z "$INFOSRCCHANGED" ]; then
         # local is clean but remote is dirty
         if [ ! -z $LOCALNOMODIFIED ]; then
-          # internal error, this case should be corrected above
+          # internal error, this case should always be corrected above
           SYNCERROR="(internal error) local is clean, but remote src is dirty"
         fi
         # incremental modifications should continue to use manual sync -s
