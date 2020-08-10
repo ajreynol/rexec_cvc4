@@ -26,7 +26,8 @@ Say we want:
 
 * Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
 for stable, which are actively being developed on the local machine in
-parallel by the developer.
+parallel by the developer. Notice that the developer is expected to want to
+switch between branches in either of these directories at any time.
 * Two build configurations: `debug` and `prod`, corresponding to debug
 and production builds of cvc4.
 
@@ -144,9 +145,9 @@ Rebase remote (not recommended to use this manually).
 # Examples:
 
 * `rexec remoteHost regress -B testBranch`
-Checkout branch `testBranch` on remote and local, run regressions on remote.
-* `rexec remoteHost rinstall -B testBranch`
-Checkout branch `testBranch` on remote and local, install on remote and copy the binary from the remote machine to the local machine.
+Checkout branch `testBranch` on remote and local, run regressions on the remote `remoteHost`.
+* `rexec remoteHost rinstall`
+Install the current local branch on remote and copy the binary from the remote machine to the local machine. Notice this will throw an error if the local code has changed, based on the policy below.
 * `rexec remoteHost regress -s src`
 Syncronize the local source to remote if the src/ directory was modified locally and run regressions.
 * `rexec remoteHost regress CVC4_REGRESSION_ARGS=--tlimit=60000`
