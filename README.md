@@ -14,20 +14,20 @@ machine.
 
 The script `rexec` is the main entry point that implements this development
 paradigm. It handles cases where the developer is using:
-- Multiple active copies of the cvc4 source in cloned git repositories,
+- Multiple working copies of the cvc4 source in cloned git repositories,
 - Multiple build configurations for each of these sources (e.g. prod/debug).
 
 The client script works in cooperation with a server script `lexec_lnx`, which
 can be installed on a remote machine `remotehost` via `rexec remotehost install-server`.
+The basic goal is to use computing power on remote machines while developing
+and testing cvc4.
 
 # Setup (example)
 
 Say we want:
 
 * Two working copies of the cvc4 git repository: `exp` for experimental and `stb`
-for stable, which are actively being developed on the local machine in
-parallel by the developer. Notice that the developer is expected to want to
-switch between branches in either of these directories at any time.
+for stable.
 * Two build configurations: `debug` and `prod`, corresponding to debug
 and production builds of cvc4.
 
@@ -41,20 +41,25 @@ assuming a local home directory `localhome`:
 * `localhome/build-cvc4/exp/prod/`
 * `localhome/build-cvc4/exp/debug/`
 
-The first and fourth contain working git clones of a (fork of) the cvc4 repo. 
-The developer may issue git commands in these directories as desired, or
-may otherwise use the `rexec` to manage certain git commands (see below).
+The first and fourth contain working git clones of a (fork of) the cvc4 repo.
+In each of these directories, if desired, the developer may issue basic
+git commands for switching branches, making commits, doing git merges and so on.
+This workflow is intended to automatically adapt to the local git state (if the
+developer manually does so), or otherwise provide ways of
+managing git while being syncronized with remote machine(s).
 
-The other four directories are working directories for issuing commands on
-remote machine(s). For example, running:
+The other four directories are the directories from which `rexec` should be
+executed, which determines how to issue commands on remote machine(s).
+For example, running:
 
 `rexec remoteHost configure`
 
-in working directory `localhome/build/stb/prod` runs a call to configure the
-production build of the stable source `localhome/cvc4-stb/` on the remote
-machine `remoteHost` (for details, see below).
+in working directory `localhome/build/stb/prod` signals a call to configure the
+production build of the stable source on the remote machine `remoteHost`
+(for details, see below).
 
-Note that the local build directories may optionally contain local build files
+Note that the local build directories under `build-cvc4/`
+may optionally contain local build files
 for the corresponding (source, build configuration) pairs. They can be
 initialized by `configure_cvc4_local` running from the local source directories.
 This is important in the case of loss of connection with remote machine(s), in
@@ -70,8 +75,8 @@ on the command line to `rexec remoteHost ...`:
 
 * What command to execute on the remote machine.
 * How do we want to syncronize the source code to the remote machine. This can
-either be manual or through git. The former may be preferred for performance
-and for keeeping a cleaner git log.
+either be manual (`-s`) or automatically done through git.
+The former may be preferred for performance and for keeeping a cleaner git log.
 
 Additional command line arguments are passed (when applicable) to the remote
 executable (e.g. to the corresponding `make regress` command that is run
@@ -138,9 +143,9 @@ accompanied with a git commit and subsequent syncronization.
 ###### Expert options:
 
 * `-b [branch name]`
-Switch to branch on remote (not recommended to use this manually).
+Request a switch to branch on remote (not recommended to use this manually).
 * `-r`
-Rebase remote (not recommended to use this manually).
+Request a rebase on remote (not recommended to use this manually).
 
 # Examples:
 
