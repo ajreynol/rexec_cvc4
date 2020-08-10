@@ -119,6 +119,12 @@ Syncronization type is one of the following:
   - `dev`: Syncronize the `src/` and `test/` subdirectories.
   - `all`: Syncronize the entire local repository (not recommended).
 
+The latter option is done manually by the developer when they know exactly
+what portion of the source tree they modified.
+Notice that using *any* syncronization option with `-s` has a special impact on
+the policy of the server (see below). In particular, the server trusts that
+all local changes are sent when any `-s` option is used.
+
 ###### Expert options:
 
 * `-b [branch name]`
@@ -147,12 +153,16 @@ Internally, the server script implements the following policy for code syncroniz
 | Yes           | Yes           | Yes             | N/A              | No                | warning: use -s               | OK if local has no changes since last `-s`       |
 | Yes           | No            | Yes             | N/A              | N/A               | force -r, error: use -s       |                                                  |
 | No            | No            | Yes             | N/A              | N/A               | force -b, error: use -s       |                                                  |
-| Yes           | Yes           | No              | Yes              | N/A               | force -r                      | Only happens if local reverts changes after `-s` |
+| Yes           | Yes           | No              | Yes              | N/A               | force -r                      | Happens if local reverts changes after `-s`      |
 | Yes           | Yes           | No              | No               | N/A               | (none)                        |                                                  |
 | Yes           | No            | No              | N/A              | N/A               | force -r                      |                                                  |
 | No            | No            | No              | N/A              | N/A               | force -b                      |                                                  |
 
-This is implemented by having the client script communicate the local code state via auto-generated command
+Overall, this policy throws an error when the local and remote are
+guaranteed to be out of sync, and a warning if it is unknown whether
+local and remote are out of sync.
+
+The above policy is implemented by having the client script communicate the local code state via auto-generated command
 line arguments (`-lbranch`, `-lcommit`, `-lnomod`, `-lsync`) when calling the server script. Thus, in all
 cases, the server script knows which case we are in. The above policy aims to do as little work
 as possible while maintaining assurance that the code is syncronized. In five of the eight cases

@@ -247,7 +247,12 @@ if [ ! -z "$REQUIRESSYNC" ]; then
         # remote is clean, probably forgot to sync changes from local
         if [ -z $LOCALNOMODIFIED ]; then
           # we know the sync is wrong, so this is an error
-          SYNCERROR="local is dirty, but remote src is clean, use -s X or commit changes locally to proceed"
+          if [ -z $LOCALSYNC ]; then
+            SYNCERROR="local is dirty, but remote src is clean, use -s X or commit changes locally to proceed"
+          else
+            # user did sync but we had to do a rebase, which dropped the sync
+            SYNCERROR="local is dirty, but remote had to be rebased, use -s X again or commit changes locally to proceed"
+          fi
         fi
       fi
     fi

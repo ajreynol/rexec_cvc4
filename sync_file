@@ -1,13 +1,16 @@
 #!/bin/bash
 
+# Used to sync files between local source directories, run in source root
+
+# usage: sync_file [file] (-p [source prefix])?
+
 # ========================= static configuration
 # name of this script
-SYNCEXEC="sync_file"
+THISEXEC="sync_file"
 # the directory containing source trees $HOMEDIR/cvc4-*
 HOMEDIR="/home/andrew"
 # ========================= end static configuration
 
-# usage: sync_file [pull prefix] [file]
 echo "=== sync_file $@"
 
 # to be run in source directory $HOMEDIR/cvc4-*/. AU

@@ -6,6 +6,7 @@
 #TODO: COMMAND: clean-src: git clean remote src
 #TODO: COMMAND: clone: git setup, auto-install dependencies?
 #TODO: COMMAND: setup: configure local, git clone remote
+#TODO: configure after reset? auto-configure?
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
