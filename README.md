@@ -107,6 +107,11 @@ Install custom file from `localhome/bin/` to `remotehome/bin/` on the remote mac
 
 ### Code syncronization options to rexec:
 
+Note that the following synronization methods can be used by the developer
+when desired. However, specifying a code syncronization method is optional.
+If none is provided, then the server script implements a default policy
+for determining the best action (see below).
+
 * `-B [branch name]`
 Switch to branch local and remote.
 * `-c [commit message]`
@@ -124,6 +129,10 @@ what portion of the source tree they modified.
 Notice that using *any* syncronization option with `-s` has a special impact on
 the policy of the server (see below). In particular, the server trusts that
 all local changes are sent when any `-s` option is used.
+
+Additionally, it is important to note that `-s` does *not* create new files
+on the remote machine. Thus, adding a new file on the local machine must be
+accompanied with a git commit and subsequent syncronization.
 
 ###### Expert options:
 
