@@ -6,7 +6,6 @@
 #TODO: COMMAND: clean-src: git clean remote src
 #TODO: COMMAND: clone: git setup, auto-install dependencies?
 #TODO: COMMAND: setup: configure local, git clone remote
-#TODO: -s sync test+src
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
@@ -185,20 +184,21 @@ elif [ X$1 = X'-c' ]; then
 elif [ X$1 = X'-s' ]; then
 
   if [ -z "$INFOSRCCHANGED" ]; then
-    echo "$THISEXEC: WARNING: No need to sync, there are no local changes."
-  else
-    # syncronize the local state of the code to the remote machine without git
-    SYNCTYPE=$2
-    shift
-    shift
-    echo "$THISEXEC: run: mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX"
-    if ! mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX; then
-      echo "$THISEXEC: ERROR: failed to syncronize source"
-      exit 1;
-    fi
-    # indicate to remote that we have sync
-    LEXECLOCALINFO="-lsync"
+    # can happen if sent modified copy and then reverted
+    echo "$THISEXEC: WARNING: There are no local changes, but sync anyways."
   fi
+  
+  # syncronize the local state of the code to the remote machine without git
+  SYNCTYPE=$2
+  shift
+  shift
+  echo "$THISEXEC: run: mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX"
+  if ! mksync_code $HOMEDIR $REMOTE $RHOMEDIR $SYNCTYPE $SRCSUFFIX; then
+    echo "$THISEXEC: ERROR: failed to syncronize source"
+    exit 1;
+  fi
+  # indicate to remote that we have sync
+  LEXECLOCALINFO="-lsync"
   
 fi
 # ========================= end code syncronization method

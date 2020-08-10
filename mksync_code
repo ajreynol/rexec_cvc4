@@ -7,7 +7,7 @@ LOCALSRCDIR="$1/cvc4"
 shift
 REMOTE="$1"
 shift
-REMOTESYNCDIRS="$1/cvc4"
+REMOTESYNCDIR="$1/cvc4"
 shift
 THISEXEC="mksync_code"
 # ========================= end static configuration
@@ -33,32 +33,37 @@ fi
 echo "$THISEXEC: with directory suffix \"$SRCSUFFIX\""
 # ========================= end compute source suffix
 
+function call_rsync
+{
+  LOCALSYNC=$1
+  REMOTESYNC=$2
+  echo "$THISEXEC: run: rsync --existing -chazP -e \"ssh -p 40\" $LOCALSYNC $REMOTE:$REMOTESYNC"
+  rsync --existing -chazP -e "ssh -p 40" $LOCALSYNC $REMOTE:$REMOTESYNC
+}
 
-# ========================= compute the sync directories
+# ========================= run syncronization
 # compute directories based on configuration
 if [ ! -z $SRCSUFFIX ]; then
-  REMOTESYNCDIRS="$REMOTESYNCDIRS-$SRCSUFFIX"
+  REMOTESYNCDIR="$REMOTESYNCDIR-$SRCSUFFIX"
   LOCALSRCDIR="$LOCALSRCDIR-$SRCSUFFIX"
 fi
 if [ $SYNCTYPE = "src" ]; then
-  LOCALSYNCDIRS="./src/"
-  REMOTESYNCDIRS="$REMOTESYNCDIRS/src/"
+  call_rsync "./src/" "$REMOTESYNCDIR/src/"
 elif [ $SYNCTYPE = "test" ]; then
-  LOCALSYNCDIRS="./test/"
-  REMOTESYNCDIRS="$REMOTESYNCDIRS/test/"
+  call_rsync "./test/" "$REMOTESYNCDIR/test/"
+elif [ $SYNCTYPE = "dev" ]; then
+  # multiple commands with an ssh connection
+  ssh -Nf -p 40 $REMOTE
+  call_rsync "./src/" "$REMOTESYNCDIR/src/"
+  call_rsync "./test/" "$REMOTESYNCDIR/test/"
+  ssh -O exit $REMOTE
 elif [ $SYNCTYPE = "all" ]; then
-  LOCALSYNCDIRS="."
+  call_rsync "."
 else
   echo "$THISEXEC: ERROR: Unknown syncronize type"
   exit 1;
 fi
 shift
 # ========================= end compute the sync directories
-
-# ========================= run syncronization
-# rsync remote with local, based on config
-echo "$THISEXEC: run: rsync --existing -chazP -e \"ssh -p 40\" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS"
-rsync --existing -chazP -e "ssh -p 40" $LOCALSYNCDIRS $REMOTE:$REMOTESYNCDIRS
-# ========================= end run syncronization
 
 echo "$THISEXEC: finished $@"
