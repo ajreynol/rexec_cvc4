@@ -65,7 +65,7 @@ function computeBuildInfo
   fi
   # add binary program prefix to configure arguments
   if [ ! -z $BINARYPREFIX ]; then
-    CARGS=" --program-prefix=$BINARYPREFIX-"
+    CARGS=" --program-prefix=$BINARYPREFIX"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"

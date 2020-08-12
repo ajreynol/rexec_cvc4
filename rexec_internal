@@ -7,6 +7,7 @@
 #TODO: COMMAND: clone: git setup, auto-install dependencies?
 #TODO: COMMAND: setup: configure local, git clone remote
 #TODO: configure after reset? auto-configure?
+#TODO: new branch?
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
@@ -85,7 +86,7 @@ function computeBuildInfo
   fi
   # add binary program prefix to configure arguments
   if [ ! -z $BINARYPREFIX ]; then
-    CARGS=" --program-prefix=$BINARYPREFIX-"
+    CARGS=" --program-prefix=$BINARYPREFIX"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
