@@ -8,6 +8,9 @@
 #TODO: COMMAND: setup: configure local, git clone remote
 #TODO: configure after reset? auto-configure?
 #TODO: new branch?
+#TODO: -ignore to ignore local changes
+#TODO: fix: unmerged paths means there are changes
+#TODO: fix: -c wrong password, needs git push
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% The client script
 
@@ -66,12 +69,12 @@ function computeBuildInfo
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing"
-  elif [ $1 = "debug-lfsc" ]; then
-    BINARYPREFIX="dl-"
-    CARGS="debug --static --no-unit-testing --lfsc"
   elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
     CARGS="debug"
+  elif [ $1 = "asan" ]; then
+    BINARYPREFIX="da-"
+    CARGS="debug --asan --no-proofs"
   elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
     CARGS="production --static --profiling"
@@ -86,7 +89,7 @@ function computeBuildInfo
   fi
   # add binary program prefix to configure arguments
   if [ ! -z $BINARYPREFIX ]; then
-    CARGS=" --program-prefix=$BINARYPREFIX"
+    CARGS="$CARGS --program-prefix=$BINARYPREFIX"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -241,7 +244,7 @@ echo "SEND COMMAND: $COMMAND $LEXECAUXARGS $@"
 echo "LOCAL SOURCE: $INFOSTRING"
 echo "==============================================="
 # check valid command
-if ! [[ "$COMMAND" =~ ^(install-server|install-file|rinstall|install|regress|ctest|configure|units|clean|reset|reset-all|info|exec|none)$ ]]; then
+if ! [[ "$COMMAND" =~ ^(install-server|install-file|rinstall|rget|install|regress|ctest|configure|units|clean|reset|reset-all|info|exec|none|reset-configure)$ ]]; then
   echo "$THISEXEC: ERROR: unknown command $COMMAND"
   exit 1
 fi
@@ -272,6 +275,22 @@ elif [ $COMMAND = "rinstall" ]; then
   echo "$THISEXEC: issue binary copy command"
   echo "$THISEXEC: run: scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
   scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
+  
+elif [ $COMMAND = "rget" ]; then
+
+  # scp the binary
+  echo "$THISEXEC: issue binary copy command"
+  echo "$THISEXEC: run: scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/"
+  scp $SCPAUXARGS $REMOTE:$RHOMEDIR/bin/$BINARYNAME $HOMEDIR/bin/
+  
+elif [ $COMMAND = "reset-configure" ]; then
+
+  # remote install to local machine
+  echo "$THISEXEC: issue remote command"
+  echo "$THISEXEC: run: ssh $HOSTNAME $SERVEREXEC $LEXECARGS reset-all $LEXECAUXARGS $@"
+  ssh $HOSTNAME $SERVEREXEC $LEXECARGS reset-all $LEXECAUXARGS $@
+  echo "$THISEXEC: run: ssh $HOSTNAME $SERVEREXEC $LEXECARGS configure $LEXECAUXARGS $@"
+  ssh $HOSTNAME $SERVEREXEC $LEXECARGS configure $LEXECAUXARGS $@
 
 else
 

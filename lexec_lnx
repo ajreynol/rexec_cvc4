@@ -45,12 +45,12 @@ function computeBuildInfo
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing"
-  elif [ $1 = "debug-lfsc" ]; then
-    BINARYPREFIX="dl-"
-    CARGS="debug --static --no-unit-testing --lfsc"
   elif [ $1 = "debug-unit" ]; then
     BINARYPREFIX="du-"
     CARGS="debug"
+  elif [ $1 = "asan" ]; then
+    BINARYPREFIX="da-"
+    CARGS="debug --asan --no-proofs"
   elif [ $1 = "profile" ]; then
     BINARYPREFIX="prof-"
     CARGS="production --static --profiling"
@@ -65,7 +65,7 @@ function computeBuildInfo
   fi
   # add binary program prefix to configure arguments
   if [ ! -z $BINARYPREFIX ]; then
-    CARGS=" --program-prefix=$BINARYPREFIX"
+    CARGS="$CARGS --program-prefix=$BINARYPREFIX"
   fi
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
@@ -122,7 +122,7 @@ fi
 COMMAND=$1
 shift
 # check command that warrant sanity information about src/binary
-if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then
+if [[ "$COMMAND" =~ ^(install|exec|regress|ctest|units|info)$ ]]; then
   REQUIRESSYNC="true"
   # compute source information, which will impact adaptive git syncronization below
   computeSrcInfo $SRCDIR
@@ -164,7 +164,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
         # local is clean but remote is dirty (case where local reverted to clean after sync in a dirty state, on the same commit)
         if [ ! -z $LOCALNOMODIFIED ]; then
           # just force rebasing to correct
-          echo "$THISEXEC: requires rebasing (local was reverted)"
+          echo "$THISEXEC: requires rebasing (maybe local was reverted?)"
           if [ -z $REBASE ]; then
             REBASE="true"
             REBASEFORCE="true"
@@ -227,7 +227,7 @@ if [ ! -z "$REQUIRESSYNC" ]; then
     else
       if [ $LOCALCOMMITREF != ${INFOSRCCOMMIT:0:8} ]; then
         # internal error, something went wrong with remote git?
-        echo "$THISEXEC: ERROR: branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], use -r to sync."
+        echo "$THISEXEC: ERROR: branch [$LOCALBRANCHREF] commit mismatch: local [$LOCALCOMMITREF], remote [${INFOSRCCOMMIT:0:8}], perhaps you have made a local commit, use git push to continue."
         exit 1
       fi
       # we are now ensured that the branch/commit matches on local and remote
@@ -316,7 +316,7 @@ elif [ $COMMAND = "configure" ]; then
 
   echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing --cxxtest-dir=$HOMEDIR/cxxtest/ --symfpu $@"
+  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing --symfpu $@"
   echo "$THISEXEC: run: ./configure.sh $CARGS"
   ./configure.sh $CARGS
   
@@ -345,7 +345,7 @@ elif [ $COMMAND = "info" ] || [ $COMMAND = "none" ]; then
 else
 
   echo "rexec: ERROR: unknown command $COMMAND"
-  exit 1
+  exit 1;
   
 fi
 # ========================= end run the command
