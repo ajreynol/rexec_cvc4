@@ -7,17 +7,17 @@
 # ========================= static configuration
 # name of this script
 THISEXEC="sync_file"
-# the directory containing source trees $HOMEDIR/cvc4-*
+# the directory containing source trees $HOMEDIR/cvc5-*
 HOMEDIR="/home/andrew"
 # ========================= end static configuration
 
 echo "=== sync_file $@"
 
-# to be run in source directory $HOMEDIR/cvc4-*/. AU
+# to be run in source directory $HOMEDIR/cvc5-*/. AU
 
 # ========================= compute source suffix
 CURRDIR=$(pwd)
-BASEDIR="$HOMEDIR/cvc4"
+BASEDIR="$HOMEDIR/cvc5"
 echo "rexec: This directory is $CURRDIR"
 if [[ $CURRDIR != $BASEDIR* ]]; then
   echo "rexec: ERROR: not a git root directory"
@@ -38,9 +38,9 @@ shift
 
 # ========================= get the source directory
 if [ ! -z $PULLPREFIX ]; then
-  SRCDIR="$HOMEDIR/cvc4-$PULLPREFIX"
+  SRCDIR="$HOMEDIR/cvc5-$PULLPREFIX"
 else
-  SRCDIR="$HOMEDIR/cvc4"
+  SRCDIR="$HOMEDIR/cvc5"
 fi
 echo "$SERVEREXEC: pull prefix is \"$PULLPREFIX\""
 echo "$SERVEREXEC: source directory is $SRCDIR"

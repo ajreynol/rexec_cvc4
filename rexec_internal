@@ -19,17 +19,17 @@
 #   [remote ssh host name] [command] [code sync options] [remote command options]
 
 # ========================= static configuration
-# the directory containing source trees $HOMEDIR/cvc4-*
+# the directory containing source trees $HOMEDIR/cvc5-*
 HOMEDIR=$1
 shift
 # the remote machine
 REMOTE=$1
 shift
-# the directory containing source trees $RHOMEDIR/cvc4-* on the remote machine
+# the directory containing source trees $RHOMEDIR/cvc5-* on the remote machine
 RHOMEDIR=$1
 shift
 # the directory containing the local build file structure
-BASEBUILDROOT="build-cvc4"
+BASEBUILDROOT="build-cvc5"
 BASEBUILDDIR="$HOMEDIR/$BASEBUILDROOT/"
 # the name of the client script (this script)
 THISEXEC="rexec"
@@ -61,11 +61,11 @@ function computeSrcInfo
 # Store result in $BINARYNAME / $CARGS
 function computeBuildInfo
 {
-  BASEBINARYNAME="cvc4"
+  BASEBINARYNAME="cvc5"
   if [ $1 = "prod" ]; then
     # production has the default prefix
     BINARYPREFIX=""
-    CARGS="production --static --program-prefix="
+    CARGS="production --static"
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing"
@@ -91,6 +91,7 @@ function computeBuildInfo
   if [ ! -z $BINARYPREFIX ]; then
     CARGS="$CARGS --program-prefix=$BINARYPREFIX"
   fi
+  CARGS="$CARGS --auto-download"
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
 }
@@ -114,7 +115,7 @@ BUILDTYPE=$(basename "${CURRDIR}")
 echo "$THISEXEC: Build type is $BUILDTYPE"
 CURRDIR=$(dirname "${CURRDIR}")
 SRCSUFFIXTMP=$(basename "${CURRDIR}")
-LOCALSRCDIR="$HOMEDIR/cvc4"
+LOCALSRCDIR="$HOMEDIR/cvc5"
 if [ ! $SRCSUFFIXTMP = "$BASEBUILDROOT" ]; then
   SRCSUFFIX="$SRCSUFFIXTMP"
   LOCALSRCDIR="$LOCALSRCDIR-$SRCSUFFIX"

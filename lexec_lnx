@@ -6,10 +6,10 @@
 #   [build type] ([source prefix])? ([local sync information])? [remote command] [sync command] [remote command arguments]
 
 # ========================= static configuration
-# the directory on the remote machine source trees $HOMEDIR/cvc4-*
+# the directory on the remote machine source trees $HOMEDIR/cvc5-*
 HOMEDIR="/space/ajreynol"
 # the directory on the remote machine containing the build file structure
-BASEBUILDDIR="/tmp/ajreynol/cmake"
+BASEBUILDDIR="/dev/shm/ajreynol/cmake"
 # the name of the server script (this script)
 THISEXEC="lexec_lnx"
 # ========================= end static configuration
@@ -37,11 +37,11 @@ function computeSrcInfo
 # Store result in $BINARYNAME / $CARGS
 function computeBuildInfo
 {
-  BASEBINARYNAME="cvc4"
+  BASEBINARYNAME="cvc5"
   if [ $1 = "prod" ]; then
     # production has the default prefix
     BINARYPREFIX=""
-    CARGS="production --static --program-prefix="
+    CARGS="production --static"
   elif [ $1 = "debug" ]; then
     BINARYPREFIX="d-"
     CARGS="debug --static --no-unit-testing"
@@ -67,6 +67,7 @@ function computeBuildInfo
   if [ ! -z $BINARYPREFIX ]; then
     CARGS="$CARGS --program-prefix=$BINARYPREFIX"
   fi
+  CARGS="$CARGS --auto-download"
   # binary name is used for remote install and double checking git scm
   BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
 }
@@ -85,10 +86,10 @@ if [ X$1 = X'-p' ]; then
   shift;
   shift;
   echo "$THISEXEC: Prefix is $SRCPREFIX"
-  SRCDIR="$HOMEDIR/cvc4-$SRCPREFIX"
+  SRCDIR="$HOMEDIR/cvc5-$SRCPREFIX"
   BUILDDIR="$BASEBUILDDIR/$SRCPREFIX/$BUILDTYPE/"
 else
-  SRCDIR="$HOMEDIR/cvc4"
+  SRCDIR="$HOMEDIR/cvc5"
   BUILDDIR="$BASEBUILDDIR/$BUILDTYPE/"
 fi
 echo "$THISEXEC: source prefix is \"$SRCPREFIX\""
@@ -277,6 +278,10 @@ computeBuildInfo $BUILDTYPE $SRCPREFIX
 echo "$THISEXEC: binary name is $BINARYNAME"
 # ========================= end compute build and configuration information, again
 
+# HACK
+echo "$THISEXEC: run: cp ~/FindGMP-hack.cmake $SRCDIR/cmake/FindGMP.cmake"
+cp ~/FindGMP-hack.cmake $SRCDIR/cmake/FindGMP.cmake
+# end HACK
 
 # ========================= run the command
 if [ $COMMAND = "install" ]; then
@@ -316,7 +321,7 @@ elif [ $COMMAND = "configure" ]; then
 
   echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing --symfpu $@"
+  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing $@"
   echo "$THISEXEC: run: ./configure.sh $CARGS"
   ./configure.sh $CARGS
   
@@ -350,6 +355,12 @@ else
 fi
 # ========================= end run the command
 
+# HACK
+echo "$THISEXEC: run: cd $SRCDIR"
+cd $SRCDIR
+echo "$THISEXEC: run: git checkout cmake/FindGMP.cmake"
+git checkout cmake/FindGMP.cmake
+# end HACK
 
 # check command that warrant sanity information about src/binary
 if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then

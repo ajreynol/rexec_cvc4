@@ -3,11 +3,11 @@
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Implements code syncronization (option -s)
 
 # ========================= static configuration
-LOCALSRCDIR="$1/cvc4"
+LOCALSRCDIR="$1/cvc5"
 shift
 REMOTE="$1"
 shift
-REMOTESYNCDIR="$1/cvc4"
+REMOTESYNCDIR="$1/cvc5"
 shift
 THISEXEC="mksync_code"
 # ========================= end static configuration
