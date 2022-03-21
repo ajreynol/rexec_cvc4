@@ -103,7 +103,10 @@ echo "$THISEXEC: run: ./configure.sh $CARGS"
 # make the make script
 cat << EOF > $BUILDDIR/run_install.sh
 #!/bin/bash
-make install -j8
+if ! make install -j8 $@; then
+  echo "ERROR: failed to install"
+  exit 1
+fi
 cp $INSTALLDIR/bin/$BINARYNAME $HOMEDIR/bin/$BINARYNAME
 EOF
 chmod +x $BUILDDIR/run_install.sh

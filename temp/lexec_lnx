@@ -290,18 +290,13 @@ if [ $COMMAND = "install" ]; then
 
   echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: run: make install -j8 $@"
-  if ! make install -j8 $@; then
-    echo "$THISEXEC: ERROR: failed to install"
-    exit 1
-  fi
+  echo "$THISEXEC: run: ./run_install.sh"
+  ./run_install.sh
   if [ $BUILDTYPE = "prod" ]; then
     # strip the binary (so that it is easier to scp from local)
-    echo "$THISEXEC: run: strip $INSTALLDIR/bin/$BINARYNAME"
-    strip $INSTALLDIR/bin/$BINARYNAME
+    echo "$THISEXEC: run: strip $HOMEDIR/bin/$BINARYNAME"
+    strip $HOMEDIR/bin/$BINARYNAME
   fi
-  # now put into home directory's bin folder
-  cp $INSTALLDIR/bin/$BINARYNAME $HOMEDIR/bin/$BINARYNAME
 elif [ $COMMAND = "regress" ] || [ $COMMAND = "units" ] || [ $COMMAND = "clean" ]; then
 
   # these commands are forwarded to make
@@ -324,9 +319,8 @@ elif [ $COMMAND = "configure" ]; then
 
   echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  CARGS="$CARGS --name=$BUILDDIR --prefix=$INSTALLDIR/ --tracing $@"
-  echo "$THISEXEC: run: ./configure.sh $CARGS"
-  ./configure.sh $CARGS
+  echo "$THISEXEC: run: configure_local $BUILDTYPE"
+  configure_local $BUILDTYPE
   
 elif [ $COMMAND = "reset" ]; then
 

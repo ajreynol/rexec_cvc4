@@ -8,8 +8,14 @@
 # ========================= static configuration
 # the directory on the remote machine source trees $HOMEDIR/cvc5-*
 HOMEDIR="/space/ajreynol"
+# the directory to install the result
+INSTALLDIR="/tmp/ajreynol"
 # the directory on the remote machine containing the build file structure
-BASEBUILDDIR="/dev/shm/ajreynol/cmake"
+if [[ $1 = "debug" ]] || [[ $1 = "debug-unit" ]] || [[ $1 = "asan" ]]; then
+  BASEBUILDDIR="/dev/shm/ajreynol/cmake"
+else
+  BASEBUILDDIR="/tmp/ajreynol"
+fi
 # the name of the server script (this script)
 THISEXEC="lexec_lnx"
 # ========================= end static configuration
@@ -94,6 +100,7 @@ else
 fi
 echo "$THISEXEC: source prefix is \"$SRCPREFIX\""
 echo "$THISEXEC: source directory is $SRCDIR"
+echo "$THISEXEC: install directory is $INSTALLDIR"
 echo "$THISEXEC: build directory is $BUILDDIR"
 # get information about the state of the local code, based on automatic command line args
 # has local indicated that it has called a remote sync operation with this?
@@ -278,27 +285,18 @@ computeBuildInfo $BUILDTYPE $SRCPREFIX
 echo "$THISEXEC: binary name is $BINARYNAME"
 # ========================= end compute build and configuration information, again
 
-# HACK
-echo "$THISEXEC: run: cp ~/FindGMP-hack.cmake $SRCDIR/cmake/FindGMP.cmake"
-cp ~/FindGMP-hack.cmake $SRCDIR/cmake/FindGMP.cmake
-# end HACK
-
 # ========================= run the command
 if [ $COMMAND = "install" ]; then
 
   echo "$THISEXEC: run: cd $BUILDDIR"
   cd $BUILDDIR
-  echo "$THISEXEC: run: make install -j8 $@"
-  if ! make install -j8 $@; then
-    echo "$THISEXEC: ERROR: failed to install"
-    exit 1
-  fi
+  echo "$THISEXEC: run: ./run_install.sh"
+  ./run_install.sh
   if [ $BUILDTYPE = "prod" ]; then
     # strip the binary (so that it is easier to scp from local)
     echo "$THISEXEC: run: strip $HOMEDIR/bin/$BINARYNAME"
     strip $HOMEDIR/bin/$BINARYNAME
   fi
-  
 elif [ $COMMAND = "regress" ] || [ $COMMAND = "units" ] || [ $COMMAND = "clean" ]; then
 
   # these commands are forwarded to make
@@ -321,9 +319,8 @@ elif [ $COMMAND = "configure" ]; then
 
   echo "$THISEXEC: run: cd $SRCDIR"
   cd $SRCDIR
-  CARGS="$CARGS --name=$BUILDDIR --prefix=$HOMEDIR/ --tracing $@"
-  echo "$THISEXEC: run: ./configure.sh $CARGS"
-  ./configure.sh $CARGS
+  echo "$THISEXEC: run: configure_local $BUILDTYPE"
+  configure_local $BUILDTYPE
   
 elif [ $COMMAND = "reset" ]; then
 
@@ -354,13 +351,6 @@ else
   
 fi
 # ========================= end run the command
-
-# HACK
-echo "$THISEXEC: run: cd $SRCDIR"
-cd $SRCDIR
-echo "$THISEXEC: run: git checkout cmake/FindGMP.cmake"
-git checkout cmake/FindGMP.cmake
-# end HACK
 
 # check command that warrant sanity information about src/binary
 if [[ "$COMMAND" =~ ^(install|regress|ctest|units|info)$ ]]; then
