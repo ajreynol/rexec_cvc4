@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# usage configure_local [build type]
+
+# ========================= static configuration
+# the directory containing source trees $HOMEDIR/cvc5-*
+HOMEDIR="/space/ajreynol"
+# the directory to install the result
+INSTALLDIR="/tmp/ajreynol"
+# the directory containing the local build file structure
+if [[ $1 = "debug" ]] || [[ $1 = "debug-unit" ]] || [[ $1 = "asan" ]]; then
+  BASEBUILDDIR="/dev/shm/ajreynol/cmake"
+else
+  BASEBUILDDIR="/tmp/ajreynol"
+fi
+# name of this script
+THISEXEC="configure_local"
+# ========================= end static configuration
+
+# ================================================== shared method library
+# Compute build information (binary name and configure options) for given build type $1 and optional source prefix $2
+# Store result in $BINARYNAME / $CARGS
+function computeBuildInfo
+{
+  BASEBINARYNAME="cvc5"
+  if [ $1 = "prod" ]; then
+    # production has the default prefix
+    BINARYPREFIX=""
+    CARGS="production --static"
+  elif [ $1 = "debug" ]; then
+    BINARYPREFIX="d-"
+    CARGS="debug --static --no-unit-testing"
+  elif [ $1 = "debug-unit" ]; then
+    BINARYPREFIX="du-"
+    CARGS="debug"
+  elif [ $1 = "profile" ]; then
+    BINARYPREFIX="prof-"
+    CARGS="production --static --profiling"
+  elif [ $1 = "asan" ]; then
+    BINARYPREFIX="da-"
+    CARGS="debug --asan --no-proofs"
+  else
+    echo "$THISEXEC: ERROR: unknown build type $1"
+    exit 1
+  fi
+  # if there is a prefix
+  if [ ! -z $2 ]; then
+    # add the src prefix if it exists
+    BINARYPREFIX="$BINARYPREFIX$2-"
+  fi
+  # add binary program prefix to configure arguments
+  if [ ! -z $BINARYPREFIX ]; then
+    CARGS="$CARGS --program-prefix=$BINARYPREFIX"
+  fi
+  CARGS="$CARGS --auto-download"
+  # binary name is used for remote install and double checking git scm
+  BINARYNAME="$BINARYPREFIX$BASEBINARYNAME"
+}
+# ================================================== end shared method library
+
+# usage: $THISEXEC [build type]
+echo "=== $THISEXEC $@"
+
+# to be run in source directory $HOMEDIR/cvc5-*/. AU
+
+BUILDTYPE=$1
+shift
+
+# ========================= compute source suffix
+CURRDIR=$(pwd)
+BASEDIR="$HOMEDIR/cvc5"
+echo "rexec: This directory is $CURRDIR"
+if [[ $CURRDIR != $BASEDIR* ]]; then
+  echo "rexec: ERROR: not a git root directory"
+  exit 1;
+fi
+SRCSUFFIX=${CURRDIR#"$BASEDIR"}
+if [ ! -z $SRCSUFFIX ]; then
+  SRCSUFFIX=${SRCSUFFIX#"-"}
+fi
+echo "rexec: with directory suffix \"$SRCSUFFIX\""
+# ========================= end compute source suffix
+
+
+# ========================= compute build directory
+if [ ! -z $SRCSUFFIX ]; then
+  BUILDDIR="$BASEBUILDDIR/$SRCSUFFIX/$BUILDTYPE/"
+else
+  BUILDDIR="$BASEBUILDDIR/$BUILDTYPE/"
+fi
+echo "lexec_lnx: build directory is $BUILDDIR"
+# ========================= end compute build directory
+
+# ========================= compute configure
+computeBuildInfo $BUILDTYPE $SRCSUFFIX
+# ========================= end compute configure
+
+
+CARGS="$CARGS --name=$BUILDDIR --prefix=$INSTALLDIR/ --tracing $@"
+echo "$THISEXEC: run: ./configure.sh $CARGS"
+./configure.sh $CARGS
+
+# make the make script
+cat << EOF > $BUILDDIR/run_install.sh
+#!/bin/bash
+if ! make install -j8 $@; then
+  echo "ERROR: failed to install"
+  exit 1
+fi
+cp $INSTALLDIR/bin/$BINARYNAME $HOMEDIR/bin/$BINARYNAME
+EOF
+chmod +x $BUILDDIR/run_install.sh
